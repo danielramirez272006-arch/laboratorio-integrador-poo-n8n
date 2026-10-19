@@ -3,9 +3,10 @@
  * src/models/*.js, garantizando la Fuente Única de Verdad.
  * Incluye:
  * - Reto 1: Jerarquía de clases con herencia y polimorfismo (Proveedor -> ProveedorNacional / ProveedorInternacional)
- * - Reto 3: Notificaciones automáticas por Gmail (Comprobante QR para aprobados + Alerta Crítica para morosos)
- * - Agente IA (@n8n/n8n-nodes-langchain.agent) con OpenAI Chat Model
+ * - Reto 3: Notificaciones automáticas por Gmail a danielramirez272006@gmail.com (Comprobante QR para aprobados + Alerta Crítica para morosos)
+ * - Agente IA (@n8n/n8n-nodes-langchain.agent) con DeepSeek Chat Model
  * - Registro en Google Sheets
+ * - Auto-recuperación: consulta /pagos para no detenerse nunca por falta de registros pendientes
  * - Lienzo 100% limpio (sin sticky notes de fondo)
  * Uso: npm run build:n8n (o npm run build:n8n:docker)
  */
@@ -26,7 +27,7 @@ const pago = limpiar(leer('../src/models/Pago.js'));
 const encabezado = `// GENERADO por scripts/build-n8n.js - NO editar a mano (editar src/models/*.js)\n// Nodo Code: Reglas de Negocio POO con Polimorfismo (Fuente Única de Verdad)\n// Modo: Run Once for All Items, JavaScript\n\n`;
 const clases = `${proveedor}\n\n${pago}\n`;
 
-// Adaptador limpio n8n: empareja cada pago pendiente con la respuesta de Hacienda
+// Adaptador limpio n8n: empareja cada pago con la respuesta de Hacienda
 const adaptador = `
 // ---------------------------------------------------------------
 // ADAPTADOR n8n: combina cada pago (nodo "Obtener pagos pendientes")
@@ -109,7 +110,7 @@ const workflow = {
     {
       parameters: {
         method: 'GET',
-        url: `${API}/pagos?estado=pendiente`,
+        url: `${API}/pagos`,
         options: {},
       },
       id: 'n2',
@@ -195,7 +196,7 @@ const workflow = {
       parameters: {
         resource: 'message',
         operation: 'send',
-        sendTo: 'proveedor@empresa.com',
+        sendTo: 'danielramirez272006@gmail.com',
         subject: '=Comprobante de Pago Aprobado: {{ $json.proveedor }} (#{{ $json.id }})',
         message: '=Estimado(a) {{ $json.proveedor }},\n\nLe informamos que su pago por un monto de {{ $json.monto }} CRC ha sido APROBADO tras validar su condición tributaria al día con el Ministerio de Hacienda.\n\nNúmero de autorización: {{ $json.referenciaAutorizacion }}\nFecha de proceso: {{ $json.fechaProceso }}\n\nPuede acceder y verificar su comprobante oficial con código QR en el siguiente enlace:\n{{ $json.qrUrl }}\n\nAdjunto encontrará el comprobante generado.\n\nAtentamente,\nDepartamento Financiero',
         options: {
@@ -242,7 +243,7 @@ const workflow = {
       parameters: {
         resource: 'message',
         operation: 'send',
-        sendTo: 'gerencia.riesgo@empresa.com',
+        sendTo: 'danielramirez272006@gmail.com',
         subject: '=🚨 ALERTA CRÍTICA: Pago Retenido por Morosidad - {{ $json.proveedor }} (#{{ $json.id }})',
         message: '=URGENTE - GERENCIA FINANCIERA:\n\nSe ha retenido el pago #{{ $json.id }} del proveedor {{ $json.proveedor }} (Cédula: {{ $json.cedula }}) por un monto de {{ $json.monto }} CRC.\n\nMotivo de la retención: {{ $json.motivo }}\nNivel de riesgo detectado: {{ $json.nivelRiesgo }}\nFecha de detección: {{ $json.fechaProceso }}\n\nEl pago ha sido bloqueado en el sistema y requiere regularización tributaria inmediata.',
         options: {},
@@ -269,17 +270,13 @@ const workflow = {
     },
     {
       parameters: {
-        model: {
-          __rl: true,
-          mode: 'list',
-          value: 'gpt-4o-mini',
-        },
+        model: 'deepseek-chat',
         options: {},
       },
       id: 'n8_model',
-      name: 'OpenAI Chat Model',
-      type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
-      typeVersion: 1.2,
+      name: 'DeepSeek Chat Model',
+      type: '@n8n/n8n-nodes-langchain.lmChatDeepSeek',
+      typeVersion: 1,
       position: [1840, 500],
     },
     {
@@ -350,7 +347,7 @@ const workflow = {
     'Alerta Moroso por Gmail': {
       main: [[{ node: 'Agente IA Auditor', type: 'main', index: 0 }]],
     },
-    'OpenAI Chat Model': {
+    'DeepSeek Chat Model': {
       ai_languageModel: [
         [{ node: 'Agente IA Auditor', type: 'ai_languageModel', index: 0 }],
       ],

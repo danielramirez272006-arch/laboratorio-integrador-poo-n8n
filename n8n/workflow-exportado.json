@@ -15,7 +15,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "http://localhost:3000/pagos?estado=pendiente",
+        "url": "http://localhost:3000/pagos",
         "options": {}
       },
       "id": "n2",
@@ -150,7 +150,7 @@
       "parameters": {
         "resource": "message",
         "operation": "send",
-        "sendTo": "proveedor@empresa.com",
+        "sendTo": "danielramirez272006@gmail.com",
         "subject": "=Comprobante de Pago Aprobado: {{ $json.proveedor }} (#{{ $json.id }})",
         "message": "=Estimado(a) {{ $json.proveedor }},\n\nLe informamos que su pago por un monto de {{ $json.monto }} CRC ha sido APROBADO tras validar su condición tributaria al día con el Ministerio de Hacienda.\n\nNúmero de autorización: {{ $json.referenciaAutorizacion }}\nFecha de proceso: {{ $json.fechaProceso }}\n\nPuede acceder y verificar su comprobante oficial con código QR en el siguiente enlace:\n{{ $json.qrUrl }}\n\nAdjunto encontrará el comprobante generado.\n\nAtentamente,\nDepartamento Financiero",
         "options": {
@@ -237,7 +237,7 @@
       "parameters": {
         "resource": "message",
         "operation": "send",
-        "sendTo": "gerencia.riesgo@empresa.com",
+        "sendTo": "danielramirez272006@gmail.com",
         "subject": "=🚨 ALERTA CRÍTICA: Pago Retenido por Morosidad - {{ $json.proveedor }} (#{{ $json.id }})",
         "message": "=URGENTE - GERENCIA FINANCIERA:\n\nSe ha retenido el pago #{{ $json.id }} del proveedor {{ $json.proveedor }} (Cédula: {{ $json.cedula }}) por un monto de {{ $json.monto }} CRC.\n\nMotivo de la retención: {{ $json.motivo }}\nNivel de riesgo detectado: {{ $json.nivelRiesgo }}\nFecha de detección: {{ $json.fechaProceso }}\n\nEl pago ha sido bloqueado en el sistema y requiere regularización tributaria inmediata.",
         "options": {}
@@ -270,17 +270,13 @@
     },
     {
       "parameters": {
-        "model": {
-          "__rl": true,
-          "mode": "list",
-          "value": "gpt-4o-mini"
-        },
+        "model": "deepseek-chat",
         "options": {}
       },
       "id": "n8_model",
-      "name": "OpenAI Chat Model",
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
-      "typeVersion": 1.2,
+      "name": "DeepSeek Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
       "position": [
         1840,
         500
@@ -453,7 +449,7 @@
         ]
       ]
     },
-    "OpenAI Chat Model": {
+    "DeepSeek Chat Model": {
       "ai_languageModel": [
         [
           {
