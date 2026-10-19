@@ -253,6 +253,7 @@ return respuestasHacienda.map((item, i) => {
       motivo: actualizado.motivo,
       qrUrl: actualizado.qrUrl,
       referenciaAutorizacion: actualizado.referenciaAutorizacion,
+      fechaProceso: actualizado.fechaProceso,
     },
   };
 });

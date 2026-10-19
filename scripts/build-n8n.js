@@ -4,6 +4,7 @@
  * Incluye:
  * - 5 reglas de negocio POO + 2 protocolos de error
  * - Descarga y generación real del archivo de imagen binario del comprobante QR
+ * - Envío del comprobante QR por Gmail
  * - Agente IA (@n8n/n8n-nodes-langchain.agent) con OpenAI Chat Model
  * - Registro en Google Sheets
  * - Lienzo 100% limpio (sin sticky notes de fondo)
@@ -52,6 +53,7 @@ return respuestasHacienda.map((item, i) => {
       motivo: actualizado.motivo,
       qrUrl: actualizado.qrUrl,
       referenciaAutorizacion: actualizado.referenciaAutorizacion,
+      fechaProceso: actualizado.fechaProceso,
     },
   };
 });
@@ -166,7 +168,7 @@ const workflow = {
       typeVersion: 2,
       position: [900, 300],
     },
-    putNode('n6', 'PUT Aprobado (con QR)', [1120, 200], false),
+    putNode('n6', 'PUT Aprobado (con QR)', [1120, 180], false),
     {
       parameters: {
         method: 'GET',
@@ -184,10 +186,34 @@ const workflow = {
       name: 'Generar Comprobante QR',
       type: 'n8n-nodes-base.httpRequest',
       typeVersion: 4.2,
-      position: [1340, 200],
+      position: [1340, 180],
       onError: 'continueRegularOutput',
     },
-    putNode('n7', 'PUT Retenido / Error / Manual', [1120, 400], true),
+    {
+      parameters: {
+        resource: 'message',
+        operation: 'send',
+        sendTo: 'proveedor@empresa.com',
+        subject: '=Comprobante de Pago Aprobado: {{ $json.proveedor }} (#{{ $json.id }})',
+        message: '=Estimado(a) {{ $json.proveedor }},\n\nLe informamos que su pago por un monto de {{ $json.monto }} CRC ha sido APROBADO tras validar su condición tributaria al día con el Ministerio de Hacienda.\n\nNúmero de autorización: {{ $json.referenciaAutorizacion }}\nFecha de proceso: {{ $json.fechaProceso }}\n\nPuede acceder y verificar su comprobante oficial con código QR en el siguiente enlace:\n{{ $json.qrUrl }}\n\nAdjunto encontrará el comprobante generado.\n\nAtentamente,\nDepartamento Financiero',
+        options: {
+          attachmentsUi: {
+            attachmentsBinary: [
+              {
+                property: 'comprobante_qr',
+              },
+            ],
+          },
+        },
+      },
+      id: 'n6_gmail',
+      name: 'Enviar Comprobante por Gmail',
+      type: 'n8n-nodes-base.gmail',
+      typeVersion: 2.1,
+      position: [1560, 180],
+      onError: 'continueRegularOutput',
+    },
+    putNode('n7', 'PUT Retenido / Error / Manual', [1120, 420], true),
     {
       parameters: {
         promptType: 'define',
@@ -198,7 +224,7 @@ const workflow = {
       name: 'Agente IA Auditor',
       type: '@n8n/n8n-nodes-langchain.agent',
       typeVersion: 1.7,
-      position: [1580, 300],
+      position: [1820, 300],
       onError: 'continueRegularOutput',
     },
     {
@@ -214,7 +240,7 @@ const workflow = {
       name: 'OpenAI Chat Model',
       type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
       typeVersion: 1.2,
-      position: [1580, 480],
+      position: [1820, 480],
     },
     {
       parameters: {
@@ -240,7 +266,7 @@ const workflow = {
       name: 'Registrar en Google Sheets',
       type: 'n8n-nodes-base.googleSheets',
       typeVersion: 4.5,
-      position: [1820, 300],
+      position: [2060, 300],
       onError: 'continueRegularOutput',
     },
   ],
@@ -267,6 +293,9 @@ const workflow = {
       main: [[{ node: 'Generar Comprobante QR', type: 'main', index: 0 }]],
     },
     'Generar Comprobante QR': {
+      main: [[{ node: 'Enviar Comprobante por Gmail', type: 'main', index: 0 }]],
+    },
+    'Enviar Comprobante por Gmail': {
       main: [[{ node: 'Agente IA Auditor', type: 'main', index: 0 }]],
     },
     'PUT Retenido / Error / Manual': {

@@ -70,6 +70,7 @@ test('Workflow exportado: Agente IA, Google Sheets, Comprobante QR y sin notas d
     '¿Pago aprobado?',
     'PUT Aprobado (con QR)',
     'Generar Comprobante QR',
+    'Enviar Comprobante por Gmail',
     'PUT Retenido / Error / Manual',
     'Agente IA Auditor',
     'OpenAI Chat Model',
@@ -78,6 +79,11 @@ test('Workflow exportado: Agente IA, Google Sheets, Comprobante QR y sin notas d
   for (const n of nombresEsperados) {
     assert.ok(nombres.has(n), `Falta el nodo requerido: ${n}`);
   }
+
+  // Nodo Gmail: debe enviar el comprobante QR al proveedor
+  const gmail = wf.nodes.find((n) => n.name === 'Enviar Comprobante por Gmail');
+  assert.equal(gmail.type, 'n8n-nodes-base.gmail');
+  assert.equal(gmail.onError, 'continueRegularOutput');
 
   // Agente IA: debe ser un agente de langchain (@n8n/n8n-nodes-langchain.agent), no un simple HTTP Request
   const agente = wf.nodes.find((n) => n.name === 'Agente IA Auditor');
