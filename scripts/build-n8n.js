@@ -198,7 +198,47 @@ const workflow = {
         operation: 'send',
         sendTo: 'danielramirez272006@gmail.com',
         subject: '=Comprobante de Pago Aprobado: {{ $json.proveedor }} (#{{ $json.id }})',
-        message: '=Estimado(a) {{ $json.proveedor }},\n\nLe informamos que su pago por un monto de {{ $json.monto }} CRC ha sido APROBADO tras validar su condición tributaria al día con el Ministerio de Hacienda.\n\nNúmero de autorización: {{ $json.referenciaAutorizacion }}\nFecha de proceso: {{ $json.fechaProceso }}\n\nPuede acceder y verificar su comprobante oficial con código QR en el siguiente enlace:\n{{ $json.qrUrl }}\n\nAdjunto encontrará el comprobante generado.\n\nAtentamente,\nDepartamento Financiero',
+        emailType: 'html',
+        message: `=<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+  <div style="background-color: #0b57d0; color: white; padding: 15px; border-radius: 6px; text-align: center;">
+    <h2 style="margin: 0; font-size: 20px;">COMPROBANTE OFICIAL DE PAGO APROBADO ✅</h2>
+    <p style="margin: 5px 0 0 0; font-size: 13px;">Departamento Financiero · Sistema POO + n8n</p>
+  </div>
+  <div style="padding: 20px 0;">
+    <p style="font-size: 15px;">Estimado(a) <strong>{{ $json.proveedor }}</strong>,</p>
+    <p style="font-size: 14px; color: #333;">Nos complace informarle que su pago ha sido <strong>APROBADO</strong> satisfactoriamente tras validar su condición tributaria al día con el Ministerio de Hacienda.</p>
+    <table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px;">
+      <tr style="background-color: #f8f9fa;">
+        <td style="padding: 10px; border: 1px solid #dee2e6;"><strong>ID de Pago:</strong></td>
+        <td style="padding: 10px; border: 1px solid #dee2e6;">#{{ $json.id }}</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px; border: 1px solid #dee2e6;"><strong>Cédula / Tax ID:</strong></td>
+        <td style="padding: 10px; border: 1px solid #dee2e6;">{{ $json.cedula }}</td>
+      </tr>
+      <tr style="background-color: #f8f9fa;">
+        <td style="padding: 10px; border: 1px solid #dee2e6;"><strong>Monto Aprobado:</strong></td>
+        <td style="padding: 10px; border: 1px solid #dee2e6; color: #137333; font-weight: bold; font-size: 16px;">{{ $json.monto }} CRC</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px; border: 1px solid #dee2e6;"><strong>Referencia de Autorización:</strong></td>
+        <td style="padding: 10px; border: 1px solid #dee2e6; font-family: monospace; font-size: 14px;">{{ $json.referenciaAutorizacion }}</td>
+      </tr>
+      <tr style="background-color: #f8f9fa;">
+        <td style="padding: 10px; border: 1px solid #dee2e6;"><strong>Fecha de Aprobación:</strong></td>
+        <td style="padding: 10px; border: 1px solid #dee2e6;">{{ $json.fechaProceso }}</td>
+      </tr>
+    </table>
+    <div style="text-align: center; margin-top: 25px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+      <p style="margin: 0 0 10px 0; font-weight: bold; color: #0b57d0; font-size: 15px;">Comprobante Digital QR Oficial</p>
+      <img src="{{ $json.qrUrl }}" alt="Código QR" width="180" height="180" style="border: 3px solid #0b57d0; border-radius: 8px; background: white; padding: 5px;"/>
+      <p style="font-size: 12px; color: #666; margin: 8px 0 0 0;">Escanee este código con su teléfono para verificar la validez.</p>
+    </div>
+  </div>
+  <div style="background-color: #f1f3f4; padding: 12px; border-radius: 4px; font-size: 11px; color: #5f6368; text-align: center;">
+    Panel de Riesgo de Proveedores con Comprobante QR · Laboratorio Integrador POO + n8n
+  </div>
+</div>`,
         options: {
           attachmentsUi: {
             attachmentsBinary: [
@@ -245,7 +285,49 @@ const workflow = {
         operation: 'send',
         sendTo: 'danielramirez272006@gmail.com',
         subject: '=🚨 ALERTA CRÍTICA: Pago Retenido por Morosidad - {{ $json.proveedor }} (#{{ $json.id }})',
-        message: '=URGENTE - GERENCIA FINANCIERA:\n\nSe ha retenido el pago #{{ $json.id }} del proveedor {{ $json.proveedor }} (Cédula: {{ $json.cedula }}) por un monto de {{ $json.monto }} CRC.\n\nMotivo de la retención: {{ $json.motivo }}\nNivel de riesgo detectado: {{ $json.nivelRiesgo }}\nFecha de detección: {{ $json.fechaProceso }}\n\nEl pago ha sido bloqueado en el sistema y requiere regularización tributaria inmediata.',
+        emailType: 'html',
+        message: `=<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 2px solid #ea4335; border-radius: 8px;">
+  <div style="background-color: #ea4335; color: white; padding: 15px; border-radius: 6px; text-align: center;">
+    <h2 style="margin: 0; font-size: 20px;">🚨 ALERTA CRÍTICA: PAGO RETENIDO POR MOROSIDAD</h2>
+    <p style="margin: 5px 0 0 0; font-size: 13px;">Control de Riesgo Fiscal & Cumplimiento Tributario</p>
+  </div>
+  <div style="padding: 20px 0;">
+    <p style="font-size: 15px;"><strong>ATENCIÓN GERENCIA FINANCIERA:</strong></p>
+    <p style="font-size: 14px; color: #333;">Se ha bloqueado automáticamente la emisión del pago debido a irregularidades fiscales detectadas ante el Ministerio de Hacienda:</p>
+    <table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px;">
+      <tr style="background-color: #fce8e6;">
+        <td style="padding: 10px; border: 1px solid #fad2cf;"><strong>ID de Pago:</strong></td>
+        <td style="padding: 10px; border: 1px solid #fad2cf;">#{{ $json.id }}</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px; border: 1px solid #fad2cf;"><strong>Proveedor:</strong></td>
+        <td style="padding: 10px; border: 1px solid #fad2cf; font-weight: bold;">{{ $json.proveedor }}</td>
+      </tr>
+      <tr style="background-color: #fce8e6;">
+        <td style="padding: 10px; border: 1px solid #fad2cf;"><strong>Cédula Jurídica:</strong></td>
+        <td style="padding: 10px; border: 1px solid #fad2cf;">{{ $json.cedula }}</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px; border: 1px solid #fad2cf;"><strong>Monto Retenido:</strong></td>
+        <td style="padding: 10px; border: 1px solid #fad2cf; color: #c5221f; font-weight: bold; font-size: 16px;">{{ $json.monto }} CRC</td>
+      </tr>
+      <tr style="background-color: #fce8e6;">
+        <td style="padding: 10px; border: 1px solid #fad2cf;"><strong>Motivo de Retención:</strong></td>
+        <td style="padding: 10px; border: 1px solid #fad2cf; color: #c5221f;">{{ $json.motivo }}</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px; border: 1px solid #fad2cf;"><strong>Nivel de Riesgo:</strong></td>
+        <td style="padding: 10px; border: 1px solid #fad2cf; font-weight: bold; color: #ea4335;">{{ $json.nivelRiesgo }}</td>
+      </tr>
+    </table>
+    <div style="background-color: #fff3e0; border-left: 4px solid #f2994a; padding: 12px; margin-top: 15px; border-radius: 4px;">
+      <p style="margin: 0; font-size: 13px; color: #7f4f00;"><strong>Acción requerida:</strong> No autorizar desembolso hasta que el proveedor regularice su morosidad ante la Dirección General de Tributación.</p>
+    </div>
+  </div>
+  <div style="background-color: #f1f3f4; padding: 10px; border-radius: 4px; font-size: 11px; color: #5f6368; text-align: center;">
+    Sistema Automatizado de Bloqueo Fiscal · POO + n8n
+  </div>
+</div>`,
         options: {},
       },
       id: 'n7_alerta_gmail',
