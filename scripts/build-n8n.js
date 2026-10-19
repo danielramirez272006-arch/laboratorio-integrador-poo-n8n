@@ -294,8 +294,15 @@ const workflow = {
           cachedResultName: 'Auditoria_Pagos',
         },
         columns: {
-          mappingMode: 'autoMapInputData',
-          value: {},
+          mappingMode: 'defineBelow',
+          value: {
+            id: '={{ $json.id }}',
+            proveedor: '={{ $json.proveedor }}',
+            monto: '={{ $json.monto }}',
+            estado: '={{ $json.estado }}',
+            motivo: '={{ $json.motivo }}',
+            auditoria_ia: '={{ $json.output || $json.text || "Auditado por IA" }}',
+          },
         },
         options: {},
       },
