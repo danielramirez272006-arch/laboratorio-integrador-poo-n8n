@@ -8,8 +8,8 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        180,
-        240
+        100,
+        300
       ]
     },
     {
@@ -23,8 +23,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        400,
-        240
+        300,
+        300
       ]
     },
     {
@@ -43,8 +43,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        620,
-        240
+        500,
+        300
       ],
       "onError": "continueRegularOutput"
     },
@@ -59,8 +59,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        840,
-        240
+        700,
+        300
       ]
     },
     {
@@ -91,8 +91,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        1060,
-        240
+        900,
+        300
       ]
     },
     {
@@ -119,9 +119,32 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1300,
-        140
+        1120,
+        200
       ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.qrUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "comprobante_qr"
+            }
+          }
+        }
+      },
+      "id": "n6_qr",
+      "name": "Generar Comprobante QR",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        200
+      ],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -147,9 +170,73 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1300,
-        340
+        1120,
+        400
       ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analiza el pago {{ $json.id }} del proveedor {{ $json.proveedor }} (Cédula: {{ $json.cedula }}). Estado final asignado por POO: {{ $json.estado }}. Motivo: {{ $json.motivo }}. Monto: {{ $json.monto }} CRC. Genera un breve dictamen ejecutivo de auditoría para la gerencia financiera.",
+        "hasOutputParser": false
+      },
+      "id": "n8_agent",
+      "name": "Agente IA Auditor",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1580,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "id": "n8_model",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1580,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Auditoria_Pagos"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "n9_sheets",
+      "name": "Registrar en Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1820,
+        300
+      ],
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -209,6 +296,61 @@
         [
           {
             "node": "PUT Retenido / Error / Manual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PUT Aprobado (con QR)": {
+      "main": [
+        [
+          {
+            "node": "Generar Comprobante QR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Comprobante QR": {
+      "main": [
+        [
+          {
+            "node": "Agente IA Auditor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PUT Retenido / Error / Manual": {
+      "main": [
+        [
+          {
+            "node": "Agente IA Auditor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente IA Auditor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente IA Auditor": {
+      "main": [
+        [
+          {
+            "node": "Registrar en Google Sheets",
             "type": "main",
             "index": 0
           }

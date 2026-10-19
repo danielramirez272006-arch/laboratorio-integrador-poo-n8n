@@ -1,6 +1,12 @@
 /**
  * Genera n8n/codigo-nodo-n8n.js y n8n/workflow-exportado.json a partir de
  * src/models/*.js, garantizando la Fuente Única de Verdad.
+ * Incluye:
+ * - 5 reglas de negocio POO + 2 protocolos de error
+ * - Descarga y generación real del archivo de imagen binario del comprobante QR
+ * - Agente IA (@n8n/n8n-nodes-langchain.agent) con OpenAI Chat Model
+ * - Registro en Google Sheets
+ * - Lienzo 100% limpio (sin sticky notes de fondo)
  * Uso: npm run build:n8n (o npm run build:n8n:docker)
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -94,7 +100,7 @@ const workflow = {
       name: 'Iniciar manualmente',
       type: 'n8n-nodes-base.manualTrigger',
       typeVersion: 1,
-      position: [180, 240],
+      position: [100, 300],
     },
     {
       parameters: {
@@ -106,7 +112,7 @@ const workflow = {
       name: 'Obtener pagos pendientes',
       type: 'n8n-nodes-base.httpRequest',
       typeVersion: 4.2,
-      position: [400, 240],
+      position: [300, 300],
     },
     {
       parameters: {
@@ -123,7 +129,7 @@ const workflow = {
       name: 'Consultar Hacienda',
       type: 'n8n-nodes-base.httpRequest',
       typeVersion: 4.2,
-      position: [620, 240],
+      position: [500, 300],
       onError: 'continueRegularOutput',
     },
     {
@@ -136,7 +142,7 @@ const workflow = {
       name: 'Reglas de negocio POO',
       type: 'n8n-nodes-base.code',
       typeVersion: 2,
-      position: [840, 240],
+      position: [700, 300],
     },
     {
       parameters: {
@@ -158,10 +164,85 @@ const workflow = {
       name: '¿Pago aprobado?',
       type: 'n8n-nodes-base.if',
       typeVersion: 2,
-      position: [1060, 240],
+      position: [900, 300],
     },
-    putNode('n6', 'PUT Aprobado (con QR)', [1300, 140], false),
-    putNode('n7', 'PUT Retenido / Error / Manual', [1300, 340], true),
+    putNode('n6', 'PUT Aprobado (con QR)', [1120, 200], false),
+    {
+      parameters: {
+        method: 'GET',
+        url: '={{ $json.qrUrl }}',
+        options: {
+          response: {
+            response: {
+              responseFormat: 'file',
+              outputPropertyName: 'comprobante_qr',
+            },
+          },
+        },
+      },
+      id: 'n6_qr',
+      name: 'Generar Comprobante QR',
+      type: 'n8n-nodes-base.httpRequest',
+      typeVersion: 4.2,
+      position: [1340, 200],
+      onError: 'continueRegularOutput',
+    },
+    putNode('n7', 'PUT Retenido / Error / Manual', [1120, 400], true),
+    {
+      parameters: {
+        promptType: 'define',
+        text: '=Analiza el pago {{ $json.id }} del proveedor {{ $json.proveedor }} (Cédula: {{ $json.cedula }}). Estado final asignado por POO: {{ $json.estado }}. Motivo: {{ $json.motivo }}. Monto: {{ $json.monto }} CRC. Genera un breve dictamen ejecutivo de auditoría para la gerencia financiera.',
+        hasOutputParser: false,
+      },
+      id: 'n8_agent',
+      name: 'Agente IA Auditor',
+      type: '@n8n/n8n-nodes-langchain.agent',
+      typeVersion: 1.7,
+      position: [1580, 300],
+      onError: 'continueRegularOutput',
+    },
+    {
+      parameters: {
+        model: {
+          __rl: true,
+          mode: 'list',
+          value: 'gpt-4o-mini',
+        },
+        options: {},
+      },
+      id: 'n8_model',
+      name: 'OpenAI Chat Model',
+      type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
+      typeVersion: 1.2,
+      position: [1580, 480],
+    },
+    {
+      parameters: {
+        operation: 'append',
+        documentId: {
+          __rl: true,
+          value: 'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit',
+          mode: 'url',
+        },
+        sheetName: {
+          __rl: true,
+          value: 'gid=0',
+          mode: 'list',
+          cachedResultName: 'Auditoria_Pagos',
+        },
+        columns: {
+          mappingMode: 'autoMapInputData',
+          value: {},
+        },
+        options: {},
+      },
+      id: 'n9_sheets',
+      name: 'Registrar en Google Sheets',
+      type: 'n8n-nodes-base.googleSheets',
+      typeVersion: 4.5,
+      position: [1820, 300],
+      onError: 'continueRegularOutput',
+    },
   ],
   connections: {
     'Iniciar manualmente': {
@@ -181,6 +262,23 @@ const workflow = {
         [{ node: 'PUT Aprobado (con QR)', type: 'main', index: 0 }],
         [{ node: 'PUT Retenido / Error / Manual', type: 'main', index: 0 }],
       ],
+    },
+    'PUT Aprobado (con QR)': {
+      main: [[{ node: 'Generar Comprobante QR', type: 'main', index: 0 }]],
+    },
+    'Generar Comprobante QR': {
+      main: [[{ node: 'Agente IA Auditor', type: 'main', index: 0 }]],
+    },
+    'PUT Retenido / Error / Manual': {
+      main: [[{ node: 'Agente IA Auditor', type: 'main', index: 0 }]],
+    },
+    'OpenAI Chat Model': {
+      ai_languageModel: [
+        [{ node: 'Agente IA Auditor', type: 'ai_languageModel', index: 0 }],
+      ],
+    },
+    'Agente IA Auditor': {
+      main: [[{ node: 'Registrar en Google Sheets', type: 'main', index: 0 }]],
     },
   },
   active: false,

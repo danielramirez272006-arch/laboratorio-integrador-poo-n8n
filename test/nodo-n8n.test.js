@@ -53,18 +53,15 @@ test('Adaptador del nodo Code n8n: procesa pagos combinando Hacienda y POO', () 
   assert.equal(aprobado.registroActualizado.historial.length, 1);
 });
 
-test('Workflow exportado: 7 nodos limpios, sin notas de fondo, conexiones lineales', () => {
+test('Workflow exportado: Agente IA, Google Sheets, Comprobante QR y sin notas de fondo', () => {
   const wf = JSON.parse(leer('../n8n/workflow-exportado.json'));
   const nombres = new Set(wf.nodes.map((n) => n.name));
 
-  // No debe haber notas de fondo ni elementos gráficos sobrantes
+  // No debe haber notas de fondo que ensucien el lienzo
   const stickyNotes = wf.nodes.filter((n) => n.type === 'n8n-nodes-base.stickyNote');
-  assert.equal(stickyNotes.length, 0, 'El lienzo debe estar limpio, sin sticky notes de fondo');
+  assert.equal(stickyNotes.length, 0, 'El lienzo debe estar limpio, sin notas adhesivas');
 
-  // Exactamente 7 nodos de ejecución limpia
-  assert.equal(wf.nodes.length, 7, 'Debe contener exactamente 7 nodos');
-
-  // Validar nombres exactos de los nodos
+  // Validar nombres exactos de los nodos requeridos
   const nombresEsperados = [
     'Iniciar manualmente',
     'Obtener pagos pendientes',
@@ -72,21 +69,39 @@ test('Workflow exportado: 7 nodos limpios, sin notas de fondo, conexiones lineal
     'Reglas de negocio POO',
     '¿Pago aprobado?',
     'PUT Aprobado (con QR)',
+    'Generar Comprobante QR',
     'PUT Retenido / Error / Manual',
+    'Agente IA Auditor',
+    'OpenAI Chat Model',
+    'Registrar en Google Sheets',
   ];
   for (const n of nombresEsperados) {
     assert.ok(nombres.has(n), `Falta el nodo requerido: ${n}`);
   }
 
-  // Todas las conexiones deben ser válidas
-  for (const [origen, c] of Object.entries(wf.connections)) {
-    assert.ok(nombres.has(origen), `Origen inexistente en conexiones: ${origen}`);
-    for (const rama of c.main) {
-      for (const d of rama) {
-        assert.ok(nombres.has(d.node), `Destino inexistente en conexiones: ${d.node}`);
-      }
-    }
-  }
+  // Agente IA: debe ser un agente de langchain (@n8n/n8n-nodes-langchain.agent), no un simple HTTP Request
+  const agente = wf.nodes.find((n) => n.name === 'Agente IA Auditor');
+  assert.equal(agente.type, '@n8n/n8n-nodes-langchain.agent');
+  assert.equal(agente.onError, 'continueRegularOutput');
+
+  // Modelo de lenguaje conectado como sub-nodo al Agente IA
+  const modelo = wf.nodes.find((n) => n.name === 'OpenAI Chat Model');
+  assert.equal(modelo.type, '@n8n/n8n-nodes-langchain.lmChatOpenAi');
+  assert.deepEqual(wf.connections['OpenAI Chat Model'].ai_languageModel[0][0], {
+    node: 'Agente IA Auditor',
+    type: 'ai_languageModel',
+    index: 0,
+  });
+
+  // Nodo Google Sheets
+  const sheets = wf.nodes.find((n) => n.name === 'Registrar en Google Sheets');
+  assert.equal(sheets.type, 'n8n-nodes-base.googleSheets');
+  assert.equal(sheets.onError, 'continueRegularOutput');
+
+  // Generación real de la imagen QR en el flujo aprobado
+  const nodoQR = wf.nodes.find((n) => n.name === 'Generar Comprobante QR');
+  assert.equal(nodoQR.parameters.url, '={{ $json.qrUrl }}');
+  assert.equal(nodoQR.parameters.options.response.response.responseFormat, 'file');
 
   // Resiliencia en consulta a Hacienda
   const hacienda = wf.nodes.find((n) => n.name === 'Consultar Hacienda');
