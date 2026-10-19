@@ -1,0 +1,24 @@
+{
+  "name": "panel-riesgo-proveedores-qr",
+  "version": "1.0.0",
+  "description": "Laboratorio Integrador #1 - Escenario 4: Panel de riesgo de proveedores con comprobante QR (POO + n8n)",
+  "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "start:poo": "node src/main.js",
+    "start:poo:offline": "node src/main.js --offline",
+    "start:api": "json-server database/db.json --port 3000",
+    "db:reset": "node scripts/seed-db.js",
+    "build:n8n": "node scripts/build-n8n.js",
+    "build:n8n:docker": "node scripts/build-n8n.js --docker",
+    "test": "node --test test/negocio.test.js test/nodo-n8n.test.js test/e2e.test.js",
+    "verify": "node scripts/verify-all.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "json-server": "^0.17.4"
+  }
+}
