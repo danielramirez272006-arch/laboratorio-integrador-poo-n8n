@@ -6,7 +6,23 @@
       "cedula": "3101012009",
       "monto": 350000,
       "fecha": "2026-10-19",
-      "estado": "pendiente"
+      "estado": "aprobado",
+      "motivo": "Al día con Hacienda",
+      "fechaProceso": "2026-10-19T17:43:49.396Z",
+      "historial": [
+        {
+          "fecha": "2026-10-19T17:43:49.396Z",
+          "de": "pendiente",
+          "a": "aprobado",
+          "motivo": "Al día con Hacienda"
+        }
+      ],
+      "referenciaAutorizacion": "AUT-1-CC97CC41",
+      "qrUrl": "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=PAGO_APROBADO%7CID%3A1%7CCED%3A3101012009%7CMONTO%3A350000%7CFECHA%3A2026-10-19%7CREF%3AAUT-1-CC97CC41",
+      "tipoProveedor": "nacional",
+      "tiempoEntregaDias": 2,
+      "nivelRiesgo": "BAJO",
+      "requiereRevision": false
     },
     {
       "id": 2,
@@ -14,7 +30,21 @@
       "cedula": "3101012009",
       "monto": 5000000,
       "fecha": "2026-10-19",
-      "estado": "pendiente"
+      "estado": "retenido_auditoria",
+      "motivo": "Monto supera 2500000 CRC; requiere revisión gerencial",
+      "fechaProceso": "2026-10-19T17:43:49.396Z",
+      "historial": [
+        {
+          "fecha": "2026-10-19T17:43:49.396Z",
+          "de": "pendiente",
+          "a": "retenido_auditoria",
+          "motivo": "Monto supera 2500000 CRC; requiere revisión gerencial"
+        }
+      ],
+      "tipoProveedor": "nacional",
+      "tiempoEntregaDias": 2,
+      "nivelRiesgo": "BAJO",
+      "requiereRevision": true
     },
     {
       "id": 3,
@@ -22,7 +52,21 @@
       "cedula": "3101307520",
       "monto": 180000,
       "fecha": "2026-10-19",
-      "estado": "pendiente"
+      "estado": "retenido",
+      "motivo": "Retenido por riesgo fiscal: proveedor moroso; proveedor omiso",
+      "fechaProceso": "2026-10-19T17:43:49.396Z",
+      "historial": [
+        {
+          "fecha": "2026-10-19T17:43:49.396Z",
+          "de": "pendiente",
+          "a": "retenido",
+          "motivo": "Retenido por riesgo fiscal: proveedor moroso; proveedor omiso"
+        }
+      ],
+      "tipoProveedor": "nacional",
+      "tiempoEntregaDias": 2,
+      "nivelRiesgo": "ALTO",
+      "requiereRevision": true
     },
     {
       "id": 4,
@@ -30,7 +74,18 @@
       "cedula": "999999999999",
       "monto": 120000,
       "fecha": "2026-10-19",
-      "estado": "pendiente"
+      "estado": "pendiente_verificacion_manual",
+      "motivo": "API de Hacienda no disponible o sin datos tributarios (Fail-Safe)",
+      "fechaProceso": "2026-10-19T17:43:49.396Z",
+      "historial": [
+        {
+          "fecha": "2026-10-19T17:43:49.396Z",
+          "de": "pendiente",
+          "a": "pendiente_verificacion_manual",
+          "motivo": "API de Hacienda no disponible o sin datos tributarios (Fail-Safe)"
+        }
+      ],
+      "requiereRevision": true
     },
     {
       "id": 5,
@@ -38,7 +93,18 @@
       "cedula": "ABC-123",
       "monto": -500,
       "fecha": "2026-10-19",
-      "estado": "pendiente"
+      "estado": "error_datos",
+      "motivo": "El monto debe ser mayor a 0; La cédula debe tener entre 9 y 12 dígitos numéricos",
+      "fechaProceso": "2026-10-19T17:43:49.396Z",
+      "historial": [
+        {
+          "fecha": "2026-10-19T17:43:49.396Z",
+          "de": "pendiente",
+          "a": "error_datos",
+          "motivo": "El monto debe ser mayor a 0; La cédula debe tener entre 9 y 12 dígitos numéricos"
+        }
+      ],
+      "requiereRevision": true
     }
   ]
 }

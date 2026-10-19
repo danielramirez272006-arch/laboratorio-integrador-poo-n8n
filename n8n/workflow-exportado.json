@@ -301,13 +301,12 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "headers": "={{ $json.output || $json.text || \"Dictamen de Auditoría\" }}",
-            "id": "={{ $json.id }}",
-            "proveedor": "={{ $json.proveedor }}",
-            "monto": "={{ $json.monto }}",
-            "estado": "={{ $json.estado }}",
-            "motivo": "={{ $json.motivo }}",
-            "auditoria_ia": "={{ $json.output || $json.text || \"Auditado por IA\" }}"
+            "headers": "={{ 'DICTAMEN IA: ' + ($json.output || $json.text || 'Auditoría completada').replace(/^#+\\s*/gm, '') }}",
+            "params": "={{ $json.proveedor }}",
+            "query": "={{ $json.monto }} CRC",
+            "body": "={{ $json.motivo }}",
+            "webhookUrl": "={{ $json.qrUrl || \"N/A\" }}",
+            "executionMode": "={{ $json.estado }}"
           }
         },
         "options": {}
