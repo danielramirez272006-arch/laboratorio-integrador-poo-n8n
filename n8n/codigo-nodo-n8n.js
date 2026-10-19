@@ -1,6 +1,6 @@
 // GENERADO por scripts/build-n8n.js - NO editar a mano (editar src/models/*.js)
-// Nodo "Reglas de negocio POO"
-// Pegar en un nodo Code (modo: Run Once for All Items, JavaScript)
+// Nodo Code: Reglas de Negocio POO (Fuente Única de Verdad)
+// Modo: Run Once for All Items, JavaScript
 
 /**
  * Proveedor: modela al proveedor y encapsula las validaciones de cédula
@@ -230,15 +230,29 @@ class Pago {
 }
 
 // ---------------------------------------------------------------
-// ADAPTADOR n8n: combina cada pago (nodo "Pre-validación POO") con la
-// respuesta de Hacienda (nodo "Consultar Hacienda"). itemMatching(i) sigue
-// el linaje de ítems, por lo que es correcto aunque el IF filtre registros.
+// ADAPTADOR n8n: combina cada pago (nodo "Obtener pagos pendientes")
+// con la respuesta de Hacienda (nodo "Consultar Hacienda").
 // ---------------------------------------------------------------
-return $input.all().map((item, i) => {
-  // Se descartan los campos auxiliares de la pre-validación.
-  const { consultarHacienda, registroActualizado, ...registro } = $('Pre-validación POO').itemMatching(i).json;
-  // Si la API falló, n8n entrega { error: ... }; se trata como "sin datos".
-  const hacienda = item.json && !item.json.error ? item.json : null;
+const pagosOriginales = $('Obtener pagos pendientes').all();
+const respuestasHacienda = $input.all();
+
+return respuestasHacienda.map((item, i) => {
+  const idx = item.pairedItem?.item ?? i;
+  const registro = pagosOriginales[idx].json;
+  // Si la API de Hacienda falló, hizo timeout o no existe, n8n entrega error:
+  const hacienda = item.json && !item.json.error && item.json.situacion ? item.json : null;
   const actualizado = new Pago(registro).procesar(hacienda);
-  return { json: { registroActualizado: actualizado, estado: actualizado.estado, id: actualizado.id } };
+  return {
+    json: {
+      registroActualizado: actualizado,
+      estado: actualizado.estado,
+      id: actualizado.id,
+      monto: actualizado.monto,
+      proveedor: actualizado.proveedor,
+      cedula: actualizado.cedula,
+      motivo: actualizado.motivo,
+      qrUrl: actualizado.qrUrl,
+      referenciaAutorizacion: actualizado.referenciaAutorizacion,
+    },
+  };
 });

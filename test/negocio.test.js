@@ -81,8 +81,6 @@ test('Single Source of Truth: n8n/codigo-nodo-n8n.js contiene las clases vigente
   const limpiar = (s) => s.replace(/^import .*$/gm, '').replace(/^export /gm, '').trim();
   const leer = (r) => readFileSync(new URL(r, import.meta.url), 'utf-8');
   const n8n = leer('../n8n/codigo-nodo-n8n.js');
-  const pre = leer('../n8n/codigo-prevalidacion-n8n.js');
   assert.ok(n8n.includes(limpiar(leer('../src/models/Proveedor.js'))), 'Proveedor desincronizado: ejecute npm run build:n8n');
   assert.ok(n8n.includes(limpiar(leer('../src/models/Pago.js'))), 'Pago desincronizado: ejecute npm run build:n8n');
-  assert.ok(pre.includes(limpiar(leer('../src/models/Proveedor.js'))) && pre.includes(limpiar(leer('../src/models/Pago.js'))), 'Pre-validación desincronizada');
 });

@@ -2,94 +2,14 @@
   "name": "Panel de riesgo de proveedores con comprobante QR",
   "nodes": [
     {
-      "parameters": {
-        "content": "## 1. Ingesta & Pre-validación POO\nRecupera pagos `estado=pendiente` de JSON Server y evalúa `Pago.requiereConsultaHacienda()`. Los registros con datos corruptos no consumen la API externa y van directo a revisión.",
-        "height": 380,
-        "width": 820,
-        "color": 5
-      },
-      "id": "note1",
-      "name": "Nota: Ingesta y Pre-validación",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -60,
-        -30
-      ]
-    },
-    {
-      "parameters": {
-        "content": "## 2. Consulta Resiliente\nConsulta la API tributaria oficial con reintentos y timeout de 8s. Con `onError: continueRegularOutput`, las caídas o cédulas inexistentes no detienen el flujo sino que activan el protocolo Fail-Safe.",
-        "height": 380,
-        "width": 250,
-        "color": 6
-      },
-      "id": "note2",
-      "name": "Nota: Consulta Hacienda",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        800,
-        -30
-      ]
-    },
-    {
-      "parameters": {
-        "content": "## 3. Motor POO & Bifurcación\nEjecuta las clases puras de ES6 (`Proveedor` y `Pago`). Evalúa riesgo fiscal, tope de auditoría gerencial (> 2.5M CRC) y genera el comprobante QR único con hash determinista.",
-        "height": 380,
-        "width": 440,
-        "color": 4
-      },
-      "id": "note3",
-      "name": "Nota: Reglas de Negocio",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        1060,
-        -30
-      ]
-    },
-    {
-      "parameters": {
-        "content": "## 4. Persistencia & Telemetría\nActualiza JSON Server vía PUT con `requiereRevision` diferenciado y consolida un reporte ejecutivo de métricas para auditoría y notificaciones.",
-        "height": 440,
-        "width": 580,
-        "color": 7
-      },
-      "id": "note4",
-      "name": "Nota: Persistencia",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        1510,
-        -80
-      ]
-    },
-    {
-      "parameters": {
-        "content": "## 5. Fase Enterprise: IA & Google Sheets\n- **Auditor IA (OpenAI gpt-4o-mini):** Recibe la telemetría consolidada de las clases POO y genera automáticamente un memorando ejecutivo y borradores de notificación.\n- **Google Sheets:** Añade la bitácora histórica en una hoja de cálculo en la nube.\n*(Cuentan con tolerancia a fallos para no bloquear el flujo si no se conectan API keys)*",
-        "height": 440,
-        "width": 560,
-        "color": 3
-      },
-      "id": "note5",
-      "name": "Nota: IA y Google Sheets",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        2110,
-        -80
-      ]
-    },
-    {
       "parameters": {},
       "id": "n1",
       "name": "Iniciar manualmente",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        0,
-        200
+        180,
+        240
       ]
     },
     {
@@ -103,56 +23,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        220,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "language": "javaScript",
-        "jsCode": "// GENERADO por scripts/build-n8n.js - NO editar a mano (editar src/models/*.js)\n// Nodo \"Pre-validación POO\"\n// Pegar en un nodo Code (modo: Run Once for All Items, JavaScript)\n\n/**\r\n * Proveedor: modela al proveedor y encapsula las validaciones de cédula\r\n * y de riesgo fiscal (datos de la API del Ministerio de Hacienda).\r\n */\r\nclass Proveedor {\r\n  #cedula;\r\n  #nombre;\r\n  #situacion;\r\n\r\n  /**\r\n   * @param {{cedula: string, nombre?: string, situacion?: object}} datos\r\n   */\r\n  constructor({ cedula, nombre = '', situacion = null } = {}) {\r\n    this.#cedula = cedula === undefined || cedula === null ? '' : String(cedula).trim();\r\n    this.#nombre = nombre;\r\n    this.#situacion = situacion && typeof situacion === 'object' ? Object.freeze({ ...situacion }) : null;\r\n  }\r\n\r\n  get cedula() {\r\n    return this.#cedula;\r\n  }\r\n\r\n  get nombre() {\r\n    return this.#nombre;\r\n  }\r\n\r\n  get situacion() {\r\n    return this.#situacion;\r\n  }\r\n\r\n  /** Construye un Proveedor a partir de la respuesta de Hacienda (o null si no hay datos). */\r\n  static desdeHacienda(cedula, respuesta) {\r\n    const valida = respuesta && typeof respuesta === 'object' && !respuesta.error && respuesta.situacion;\r\n    return new Proveedor({\r\n      cedula,\r\n      nombre: valida ? respuesta.nombre || '' : '',\r\n      situacion: valida ? respuesta.situacion : null,\r\n    });\r\n  }\r\n\r\n  /** Regla 1: la cédula debe tener entre 9 y 12 dígitos numéricos. */\r\n  tieneCedulaValida() {\r\n    return /^\\d{9,12}$/.test(this.#cedula);\r\n  }\r\n\r\n  /** Indica si Hacienda devolvió datos tributarios utilizables. */\r\n  tieneDatosTributarios() {\r\n    return this.#situacion !== null && typeof this.#situacion === 'object';\r\n  }\r\n\r\n  /**\r\n   * Regla 2: apto solo si moroso === \"NO\", omiso === \"NO\" y estado\r\n   * no es desinscrito ni suspendido.\r\n   * @returns {{apto: boolean, motivo: string}}\r\n   */\r\n  evaluarRiesgoFiscal() {\r\n    if (!this.tieneDatosTributarios()) {\r\n      return { apto: false, motivo: 'Sin datos tributarios' };\r\n    }\r\n    const moroso = String(this.#situacion.moroso ?? '').trim().toUpperCase();\r\n    const omiso = String(this.#situacion.omiso ?? '').trim().toUpperCase();\r\n    const estado = String(this.#situacion.estado ?? '').trim().toLowerCase();\r\n\r\n    const motivos = [];\r\n    if (moroso !== 'NO') motivos.push('proveedor moroso');\r\n    if (omiso !== 'NO') motivos.push('proveedor omiso');\r\n    if (estado.includes('desinscrit') || estado.includes('suspendid')) {\r\n      motivos.push(`estado tributario: ${this.#situacion.estado}`);\r\n    }\r\n    return motivos.length === 0\r\n      ? { apto: true, motivo: 'Al día con Hacienda' }\r\n      : { apto: false, motivo: motivos.join('; ') };\r\n  }\r\n}\n\n/**\r\n * Pago: modela el pago a un proveedor, aplica los límites de monto,\r\n * evalúa las reglas de negocio y genera el comprobante QR.\r\n */\r\nclass Pago {\r\n  static LIMITE_AUDITORIA = 2500000;\r\n  static QR_BASE_URL = 'https://api.qrserver.com/v1/create-qr-code/';\r\n\r\n  #datos;\r\n\r\n  /** @param {object} datos Registro tal cual viene de JSON Server. */\r\n  constructor(datos = {}) {\r\n    this.#datos = { ...datos };\r\n  }\r\n\r\n  get id() {\r\n    return this.#datos.id;\r\n  }\r\n\r\n  get cedula() {\r\n    return this.#datos.cedula;\r\n  }\r\n\r\n  get monto() {\r\n    return this.#datos.monto;\r\n  }\r\n\r\n  get fecha() {\r\n    return this.#datos.fecha;\r\n  }\r\n\r\n  get estado() {\r\n    return this.#datos.estado;\r\n  }\r\n\r\n  /** Regla 4: solo se procesan registros en estado \"pendiente\". */\r\n  estaPendiente() {\r\n    return this.#datos.estado === 'pendiente';\r\n  }\r\n\r\n  /**\r\n   * Error 1: falta ID, monto <= 0 o cédula inválida.\r\n   * @returns {{valido: boolean, errores: string[]}}\r\n   */\r\n  validarDatosPago() {\r\n    const errores = [];\r\n    const id = this.#datos.id;\r\n    if (id === undefined || id === null || id === '') errores.push('Falta el ID del pago');\r\n    const monto = Number(this.#datos.monto);\r\n    if (this.#datos.monto === undefined || this.#datos.monto === null || !Number.isFinite(monto) || monto <= 0) {\r\n      errores.push('El monto debe ser mayor a 0');\r\n    }\r\n    if (!new Proveedor({ cedula: this.#datos.cedula }).tieneCedulaValida()) {\r\n      errores.push('La cédula debe tener entre 9 y 12 dígitos numéricos');\r\n    }\r\n    const fecha = this.#datos.fecha;\r\n    if (typeof fecha !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}/.test(fecha) || Number.isNaN(Date.parse(fecha))) {\r\n      errores.push('La fecha es obligatoria con formato AAAA-MM-DD');\r\n    }\r\n    return { valido: errores.length === 0, errores };\r\n  }\r\n\r\n  /** Regla 3: montos superiores a 2,500,000 CRC requieren revisión gerencial. */\r\n  requiereAuditoriaPorMonto() {\r\n    return Number(this.#datos.monto) > Pago.LIMITE_AUDITORIA;\r\n  }\r\n\r\n  /**\r\n   * Regla 5: referencia de autorización única + URL del QR que codifica\r\n   * ID, cédula, monto y fecha.\r\n   */\r\n  generarComprobanteQR() {\r\n    const payload = `PAGO_APROBADO|ID:${this.#datos.id}|CED:${this.#datos.cedula}|MONTO:${this.#datos.monto}|FECHA:${this.#datos.fecha}`;\r\n    let hash = 5381;\r\n    for (let i = 0; i < payload.length; i++) {\r\n      hash = ((hash << 5) + hash + payload.charCodeAt(i)) >>> 0;\r\n    }\r\n    const referencia = `AUT-${String(this.#datos.id).toUpperCase()}-${hash.toString(16).toUpperCase().padStart(8, '0')}`;\r\n    const data = encodeURIComponent(`${payload}|REF:${referencia}`);\r\n    return {\r\n      referenciaAutorizacion: referencia,\r\n      qrUrl: `${Pago.QR_BASE_URL}?size=250x250&data=${data}`,\r\n    };\r\n  }\r\n\r\n  /**\r\n   * Indica si vale la pena consultar a Hacienda: solo pagos pendientes con datos válidos.\r\n   * Evita llamadas innecesarias a la API externa.\r\n   */\r\n  requiereConsultaHacienda() {\r\n    return this.estaPendiente() && this.validarDatosPago().valido;\r\n  }\r\n\r\n  /**\r\n   * Ejecuta todas las reglas de negocio.\r\n   * @param {object|null} respuestaHacienda Respuesta de Hacienda; null/inválida si la API falló.\r\n   * @returns {object} Registro actualizado listo para el PUT a JSON Server.\r\n   */\r\n  procesar(respuestaHacienda = null, ahora = new Date()) {\r\n    const base = { ...this.#datos };\r\n    const resultado = (estado, motivo, extra = {}) => ({\r\n      ...base,\r\n      estado,\r\n      motivo,\r\n      fechaProceso: ahora.toISOString(),\r\n      // Bitácora de auditoría: cada decisión queda registrada con motivo y fecha.\r\n      historial: [\r\n        ...(Array.isArray(base.historial) ? base.historial : []),\r\n        { fecha: ahora.toISOString(), de: base.estado, a: estado, motivo },\r\n      ],\r\n      ...extra,\r\n    });\r\n\r\n    // Regla 4: respetar estado previo\r\n    if (!this.estaPendiente()) {\r\n      return { ...base, motivo: base.motivo ?? 'Registro ya procesado; se respeta su estado' };\r\n    }\r\n\r\n    // Error 1: datos corruptos (no interrumpe el flujo)\r\n    const validacion = this.validarDatosPago();\r\n    if (!validacion.valido) {\r\n      return resultado('error_datos', validacion.errores.join('; '));\r\n    }\r\n\r\n    // Error 2: Hacienda caída / cédula inexistente -> Fail-Safe\r\n    const proveedor = Proveedor.desdeHacienda(this.#datos.cedula, respuestaHacienda);\r\n    if (!proveedor.tieneDatosTributarios()) {\r\n      return resultado(\r\n        'pendiente_verificacion_manual',\r\n        'API de Hacienda no disponible o sin datos tributarios (Fail-Safe)'\r\n      );\r\n    }\r\n\r\n    // Regla 2: riesgo fiscal\r\n    const riesgo = proveedor.evaluarRiesgoFiscal();\r\n    if (!riesgo.apto) {\r\n      return resultado('retenido', `Retenido por riesgo fiscal: ${riesgo.motivo}`);\r\n    }\r\n\r\n    // Regla 3: auditoría por monto alto\r\n    if (this.requiereAuditoriaPorMonto()) {\r\n      return resultado(\r\n        'retenido_auditoria',\r\n        `Monto supera ${Pago.LIMITE_AUDITORIA} CRC; requiere revisión gerencial`\r\n      );\r\n    }\r\n\r\n    // Regla 5: aprobado con comprobante QR\r\n    return resultado('aprobado', riesgo.motivo, this.generarComprobanteQR());\r\n  }\r\n}\n\n// ---------------------------------------------------------------\n// ADAPTADOR n8n (pre-validación): los pagos con datos corruptos o ya procesados\n// no consultan a Hacienda; su resultado se calcula aquí con la clase Pago.\n// ---------------------------------------------------------------\nreturn $input.all().map((item) => {\n  const pago = new Pago(item.json);\n  const consultar = pago.requiereConsultaHacienda();\n  const actualizado = consultar ? null : pago.procesar(null);\n  return {\n    json: {\n      ...item.json,\n      consultarHacienda: consultar,\n      registroActualizado: actualizado,\n    },\n  };\n});\n"
-      },
-      "id": "n8",
-      "name": "Pre-validación POO",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        440,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "c0",
-              "leftValue": "={{ $json.consultarHacienda }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "n9",
-      "name": "¿Datos válidos? (consultar Hacienda)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        660,
-        200
+        400,
+        240
       ]
     },
     {
@@ -171,8 +43,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        880,
-        100
+        620,
+        240
       ],
       "onError": "continueRegularOutput"
     },
@@ -180,15 +52,15 @@
       "parameters": {
         "mode": "runOnceForAllItems",
         "language": "javaScript",
-        "jsCode": "// GENERADO por scripts/build-n8n.js - NO editar a mano (editar src/models/*.js)\n// Nodo \"Reglas de negocio POO\"\n// Pegar en un nodo Code (modo: Run Once for All Items, JavaScript)\n\n/**\r\n * Proveedor: modela al proveedor y encapsula las validaciones de cédula\r\n * y de riesgo fiscal (datos de la API del Ministerio de Hacienda).\r\n */\r\nclass Proveedor {\r\n  #cedula;\r\n  #nombre;\r\n  #situacion;\r\n\r\n  /**\r\n   * @param {{cedula: string, nombre?: string, situacion?: object}} datos\r\n   */\r\n  constructor({ cedula, nombre = '', situacion = null } = {}) {\r\n    this.#cedula = cedula === undefined || cedula === null ? '' : String(cedula).trim();\r\n    this.#nombre = nombre;\r\n    this.#situacion = situacion && typeof situacion === 'object' ? Object.freeze({ ...situacion }) : null;\r\n  }\r\n\r\n  get cedula() {\r\n    return this.#cedula;\r\n  }\r\n\r\n  get nombre() {\r\n    return this.#nombre;\r\n  }\r\n\r\n  get situacion() {\r\n    return this.#situacion;\r\n  }\r\n\r\n  /** Construye un Proveedor a partir de la respuesta de Hacienda (o null si no hay datos). */\r\n  static desdeHacienda(cedula, respuesta) {\r\n    const valida = respuesta && typeof respuesta === 'object' && !respuesta.error && respuesta.situacion;\r\n    return new Proveedor({\r\n      cedula,\r\n      nombre: valida ? respuesta.nombre || '' : '',\r\n      situacion: valida ? respuesta.situacion : null,\r\n    });\r\n  }\r\n\r\n  /** Regla 1: la cédula debe tener entre 9 y 12 dígitos numéricos. */\r\n  tieneCedulaValida() {\r\n    return /^\\d{9,12}$/.test(this.#cedula);\r\n  }\r\n\r\n  /** Indica si Hacienda devolvió datos tributarios utilizables. */\r\n  tieneDatosTributarios() {\r\n    return this.#situacion !== null && typeof this.#situacion === 'object';\r\n  }\r\n\r\n  /**\r\n   * Regla 2: apto solo si moroso === \"NO\", omiso === \"NO\" y estado\r\n   * no es desinscrito ni suspendido.\r\n   * @returns {{apto: boolean, motivo: string}}\r\n   */\r\n  evaluarRiesgoFiscal() {\r\n    if (!this.tieneDatosTributarios()) {\r\n      return { apto: false, motivo: 'Sin datos tributarios' };\r\n    }\r\n    const moroso = String(this.#situacion.moroso ?? '').trim().toUpperCase();\r\n    const omiso = String(this.#situacion.omiso ?? '').trim().toUpperCase();\r\n    const estado = String(this.#situacion.estado ?? '').trim().toLowerCase();\r\n\r\n    const motivos = [];\r\n    if (moroso !== 'NO') motivos.push('proveedor moroso');\r\n    if (omiso !== 'NO') motivos.push('proveedor omiso');\r\n    if (estado.includes('desinscrit') || estado.includes('suspendid')) {\r\n      motivos.push(`estado tributario: ${this.#situacion.estado}`);\r\n    }\r\n    return motivos.length === 0\r\n      ? { apto: true, motivo: 'Al día con Hacienda' }\r\n      : { apto: false, motivo: motivos.join('; ') };\r\n  }\r\n}\n\n/**\r\n * Pago: modela el pago a un proveedor, aplica los límites de monto,\r\n * evalúa las reglas de negocio y genera el comprobante QR.\r\n */\r\nclass Pago {\r\n  static LIMITE_AUDITORIA = 2500000;\r\n  static QR_BASE_URL = 'https://api.qrserver.com/v1/create-qr-code/';\r\n\r\n  #datos;\r\n\r\n  /** @param {object} datos Registro tal cual viene de JSON Server. */\r\n  constructor(datos = {}) {\r\n    this.#datos = { ...datos };\r\n  }\r\n\r\n  get id() {\r\n    return this.#datos.id;\r\n  }\r\n\r\n  get cedula() {\r\n    return this.#datos.cedula;\r\n  }\r\n\r\n  get monto() {\r\n    return this.#datos.monto;\r\n  }\r\n\r\n  get fecha() {\r\n    return this.#datos.fecha;\r\n  }\r\n\r\n  get estado() {\r\n    return this.#datos.estado;\r\n  }\r\n\r\n  /** Regla 4: solo se procesan registros en estado \"pendiente\". */\r\n  estaPendiente() {\r\n    return this.#datos.estado === 'pendiente';\r\n  }\r\n\r\n  /**\r\n   * Error 1: falta ID, monto <= 0 o cédula inválida.\r\n   * @returns {{valido: boolean, errores: string[]}}\r\n   */\r\n  validarDatosPago() {\r\n    const errores = [];\r\n    const id = this.#datos.id;\r\n    if (id === undefined || id === null || id === '') errores.push('Falta el ID del pago');\r\n    const monto = Number(this.#datos.monto);\r\n    if (this.#datos.monto === undefined || this.#datos.monto === null || !Number.isFinite(monto) || monto <= 0) {\r\n      errores.push('El monto debe ser mayor a 0');\r\n    }\r\n    if (!new Proveedor({ cedula: this.#datos.cedula }).tieneCedulaValida()) {\r\n      errores.push('La cédula debe tener entre 9 y 12 dígitos numéricos');\r\n    }\r\n    const fecha = this.#datos.fecha;\r\n    if (typeof fecha !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}/.test(fecha) || Number.isNaN(Date.parse(fecha))) {\r\n      errores.push('La fecha es obligatoria con formato AAAA-MM-DD');\r\n    }\r\n    return { valido: errores.length === 0, errores };\r\n  }\r\n\r\n  /** Regla 3: montos superiores a 2,500,000 CRC requieren revisión gerencial. */\r\n  requiereAuditoriaPorMonto() {\r\n    return Number(this.#datos.monto) > Pago.LIMITE_AUDITORIA;\r\n  }\r\n\r\n  /**\r\n   * Regla 5: referencia de autorización única + URL del QR que codifica\r\n   * ID, cédula, monto y fecha.\r\n   */\r\n  generarComprobanteQR() {\r\n    const payload = `PAGO_APROBADO|ID:${this.#datos.id}|CED:${this.#datos.cedula}|MONTO:${this.#datos.monto}|FECHA:${this.#datos.fecha}`;\r\n    let hash = 5381;\r\n    for (let i = 0; i < payload.length; i++) {\r\n      hash = ((hash << 5) + hash + payload.charCodeAt(i)) >>> 0;\r\n    }\r\n    const referencia = `AUT-${String(this.#datos.id).toUpperCase()}-${hash.toString(16).toUpperCase().padStart(8, '0')}`;\r\n    const data = encodeURIComponent(`${payload}|REF:${referencia}`);\r\n    return {\r\n      referenciaAutorizacion: referencia,\r\n      qrUrl: `${Pago.QR_BASE_URL}?size=250x250&data=${data}`,\r\n    };\r\n  }\r\n\r\n  /**\r\n   * Indica si vale la pena consultar a Hacienda: solo pagos pendientes con datos válidos.\r\n   * Evita llamadas innecesarias a la API externa.\r\n   */\r\n  requiereConsultaHacienda() {\r\n    return this.estaPendiente() && this.validarDatosPago().valido;\r\n  }\r\n\r\n  /**\r\n   * Ejecuta todas las reglas de negocio.\r\n   * @param {object|null} respuestaHacienda Respuesta de Hacienda; null/inválida si la API falló.\r\n   * @returns {object} Registro actualizado listo para el PUT a JSON Server.\r\n   */\r\n  procesar(respuestaHacienda = null, ahora = new Date()) {\r\n    const base = { ...this.#datos };\r\n    const resultado = (estado, motivo, extra = {}) => ({\r\n      ...base,\r\n      estado,\r\n      motivo,\r\n      fechaProceso: ahora.toISOString(),\r\n      // Bitácora de auditoría: cada decisión queda registrada con motivo y fecha.\r\n      historial: [\r\n        ...(Array.isArray(base.historial) ? base.historial : []),\r\n        { fecha: ahora.toISOString(), de: base.estado, a: estado, motivo },\r\n      ],\r\n      ...extra,\r\n    });\r\n\r\n    // Regla 4: respetar estado previo\r\n    if (!this.estaPendiente()) {\r\n      return { ...base, motivo: base.motivo ?? 'Registro ya procesado; se respeta su estado' };\r\n    }\r\n\r\n    // Error 1: datos corruptos (no interrumpe el flujo)\r\n    const validacion = this.validarDatosPago();\r\n    if (!validacion.valido) {\r\n      return resultado('error_datos', validacion.errores.join('; '));\r\n    }\r\n\r\n    // Error 2: Hacienda caída / cédula inexistente -> Fail-Safe\r\n    const proveedor = Proveedor.desdeHacienda(this.#datos.cedula, respuestaHacienda);\r\n    if (!proveedor.tieneDatosTributarios()) {\r\n      return resultado(\r\n        'pendiente_verificacion_manual',\r\n        'API de Hacienda no disponible o sin datos tributarios (Fail-Safe)'\r\n      );\r\n    }\r\n\r\n    // Regla 2: riesgo fiscal\r\n    const riesgo = proveedor.evaluarRiesgoFiscal();\r\n    if (!riesgo.apto) {\r\n      return resultado('retenido', `Retenido por riesgo fiscal: ${riesgo.motivo}`);\r\n    }\r\n\r\n    // Regla 3: auditoría por monto alto\r\n    if (this.requiereAuditoriaPorMonto()) {\r\n      return resultado(\r\n        'retenido_auditoria',\r\n        `Monto supera ${Pago.LIMITE_AUDITORIA} CRC; requiere revisión gerencial`\r\n      );\r\n    }\r\n\r\n    // Regla 5: aprobado con comprobante QR\r\n    return resultado('aprobado', riesgo.motivo, this.generarComprobanteQR());\r\n  }\r\n}\n\n// ---------------------------------------------------------------\n// ADAPTADOR n8n: combina cada pago (nodo \"Pre-validación POO\") con la\n// respuesta de Hacienda (nodo \"Consultar Hacienda\"). itemMatching(i) sigue\n// el linaje de ítems, por lo que es correcto aunque el IF filtre registros.\n// ---------------------------------------------------------------\nreturn $input.all().map((item, i) => {\n  // Se descartan los campos auxiliares de la pre-validación.\n  const { consultarHacienda, registroActualizado, ...registro } = $('Pre-validación POO').itemMatching(i).json;\n  // Si la API falló, n8n entrega { error: ... }; se trata como \"sin datos\".\n  const hacienda = item.json && !item.json.error ? item.json : null;\n  const actualizado = new Pago(registro).procesar(hacienda);\n  return { json: { registroActualizado: actualizado, estado: actualizado.estado, id: actualizado.id } };\n});\n"
+        "jsCode": "// GENERADO por scripts/build-n8n.js - NO editar a mano (editar src/models/*.js)\n// Nodo Code: Reglas de Negocio POO (Fuente Única de Verdad)\n// Modo: Run Once for All Items, JavaScript\n\n/**\r\n * Proveedor: modela al proveedor y encapsula las validaciones de cédula\r\n * y de riesgo fiscal (datos de la API del Ministerio de Hacienda).\r\n */\r\nclass Proveedor {\r\n  #cedula;\r\n  #nombre;\r\n  #situacion;\r\n\r\n  /**\r\n   * @param {{cedula: string, nombre?: string, situacion?: object}} datos\r\n   */\r\n  constructor({ cedula, nombre = '', situacion = null } = {}) {\r\n    this.#cedula = cedula === undefined || cedula === null ? '' : String(cedula).trim();\r\n    this.#nombre = nombre;\r\n    this.#situacion = situacion && typeof situacion === 'object' ? Object.freeze({ ...situacion }) : null;\r\n  }\r\n\r\n  get cedula() {\r\n    return this.#cedula;\r\n  }\r\n\r\n  get nombre() {\r\n    return this.#nombre;\r\n  }\r\n\r\n  get situacion() {\r\n    return this.#situacion;\r\n  }\r\n\r\n  /** Construye un Proveedor a partir de la respuesta de Hacienda (o null si no hay datos). */\r\n  static desdeHacienda(cedula, respuesta) {\r\n    const valida = respuesta && typeof respuesta === 'object' && !respuesta.error && respuesta.situacion;\r\n    return new Proveedor({\r\n      cedula,\r\n      nombre: valida ? respuesta.nombre || '' : '',\r\n      situacion: valida ? respuesta.situacion : null,\r\n    });\r\n  }\r\n\r\n  /** Regla 1: la cédula debe tener entre 9 y 12 dígitos numéricos. */\r\n  tieneCedulaValida() {\r\n    return /^\\d{9,12}$/.test(this.#cedula);\r\n  }\r\n\r\n  /** Indica si Hacienda devolvió datos tributarios utilizables. */\r\n  tieneDatosTributarios() {\r\n    return this.#situacion !== null && typeof this.#situacion === 'object';\r\n  }\r\n\r\n  /**\r\n   * Regla 2: apto solo si moroso === \"NO\", omiso === \"NO\" y estado\r\n   * no es desinscrito ni suspendido.\r\n   * @returns {{apto: boolean, motivo: string}}\r\n   */\r\n  evaluarRiesgoFiscal() {\r\n    if (!this.tieneDatosTributarios()) {\r\n      return { apto: false, motivo: 'Sin datos tributarios' };\r\n    }\r\n    const moroso = String(this.#situacion.moroso ?? '').trim().toUpperCase();\r\n    const omiso = String(this.#situacion.omiso ?? '').trim().toUpperCase();\r\n    const estado = String(this.#situacion.estado ?? '').trim().toLowerCase();\r\n\r\n    const motivos = [];\r\n    if (moroso !== 'NO') motivos.push('proveedor moroso');\r\n    if (omiso !== 'NO') motivos.push('proveedor omiso');\r\n    if (estado.includes('desinscrit') || estado.includes('suspendid')) {\r\n      motivos.push(`estado tributario: ${this.#situacion.estado}`);\r\n    }\r\n    return motivos.length === 0\r\n      ? { apto: true, motivo: 'Al día con Hacienda' }\r\n      : { apto: false, motivo: motivos.join('; ') };\r\n  }\r\n}\n\n/**\r\n * Pago: modela el pago a un proveedor, aplica los límites de monto,\r\n * evalúa las reglas de negocio y genera el comprobante QR.\r\n */\r\nclass Pago {\r\n  static LIMITE_AUDITORIA = 2500000;\r\n  static QR_BASE_URL = 'https://api.qrserver.com/v1/create-qr-code/';\r\n\r\n  #datos;\r\n\r\n  /** @param {object} datos Registro tal cual viene de JSON Server. */\r\n  constructor(datos = {}) {\r\n    this.#datos = { ...datos };\r\n  }\r\n\r\n  get id() {\r\n    return this.#datos.id;\r\n  }\r\n\r\n  get cedula() {\r\n    return this.#datos.cedula;\r\n  }\r\n\r\n  get monto() {\r\n    return this.#datos.monto;\r\n  }\r\n\r\n  get fecha() {\r\n    return this.#datos.fecha;\r\n  }\r\n\r\n  get estado() {\r\n    return this.#datos.estado;\r\n  }\r\n\r\n  /** Regla 4: solo se procesan registros en estado \"pendiente\". */\r\n  estaPendiente() {\r\n    return this.#datos.estado === 'pendiente';\r\n  }\r\n\r\n  /**\r\n   * Error 1: falta ID, monto <= 0 o cédula inválida.\r\n   * @returns {{valido: boolean, errores: string[]}}\r\n   */\r\n  validarDatosPago() {\r\n    const errores = [];\r\n    const id = this.#datos.id;\r\n    if (id === undefined || id === null || id === '') errores.push('Falta el ID del pago');\r\n    const monto = Number(this.#datos.monto);\r\n    if (this.#datos.monto === undefined || this.#datos.monto === null || !Number.isFinite(monto) || monto <= 0) {\r\n      errores.push('El monto debe ser mayor a 0');\r\n    }\r\n    if (!new Proveedor({ cedula: this.#datos.cedula }).tieneCedulaValida()) {\r\n      errores.push('La cédula debe tener entre 9 y 12 dígitos numéricos');\r\n    }\r\n    const fecha = this.#datos.fecha;\r\n    if (typeof fecha !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}/.test(fecha) || Number.isNaN(Date.parse(fecha))) {\r\n      errores.push('La fecha es obligatoria con formato AAAA-MM-DD');\r\n    }\r\n    return { valido: errores.length === 0, errores };\r\n  }\r\n\r\n  /** Regla 3: montos superiores a 2,500,000 CRC requieren revisión gerencial. */\r\n  requiereAuditoriaPorMonto() {\r\n    return Number(this.#datos.monto) > Pago.LIMITE_AUDITORIA;\r\n  }\r\n\r\n  /**\r\n   * Regla 5: referencia de autorización única + URL del QR que codifica\r\n   * ID, cédula, monto y fecha.\r\n   */\r\n  generarComprobanteQR() {\r\n    const payload = `PAGO_APROBADO|ID:${this.#datos.id}|CED:${this.#datos.cedula}|MONTO:${this.#datos.monto}|FECHA:${this.#datos.fecha}`;\r\n    let hash = 5381;\r\n    for (let i = 0; i < payload.length; i++) {\r\n      hash = ((hash << 5) + hash + payload.charCodeAt(i)) >>> 0;\r\n    }\r\n    const referencia = `AUT-${String(this.#datos.id).toUpperCase()}-${hash.toString(16).toUpperCase().padStart(8, '0')}`;\r\n    const data = encodeURIComponent(`${payload}|REF:${referencia}`);\r\n    return {\r\n      referenciaAutorizacion: referencia,\r\n      qrUrl: `${Pago.QR_BASE_URL}?size=250x250&data=${data}`,\r\n    };\r\n  }\r\n\r\n  /**\r\n   * Indica si vale la pena consultar a Hacienda: solo pagos pendientes con datos válidos.\r\n   * Evita llamadas innecesarias a la API externa.\r\n   */\r\n  requiereConsultaHacienda() {\r\n    return this.estaPendiente() && this.validarDatosPago().valido;\r\n  }\r\n\r\n  /**\r\n   * Ejecuta todas las reglas de negocio.\r\n   * @param {object|null} respuestaHacienda Respuesta de Hacienda; null/inválida si la API falló.\r\n   * @returns {object} Registro actualizado listo para el PUT a JSON Server.\r\n   */\r\n  procesar(respuestaHacienda = null, ahora = new Date()) {\r\n    const base = { ...this.#datos };\r\n    const resultado = (estado, motivo, extra = {}) => ({\r\n      ...base,\r\n      estado,\r\n      motivo,\r\n      fechaProceso: ahora.toISOString(),\r\n      // Bitácora de auditoría: cada decisión queda registrada con motivo y fecha.\r\n      historial: [\r\n        ...(Array.isArray(base.historial) ? base.historial : []),\r\n        { fecha: ahora.toISOString(), de: base.estado, a: estado, motivo },\r\n      ],\r\n      ...extra,\r\n    });\r\n\r\n    // Regla 4: respetar estado previo\r\n    if (!this.estaPendiente()) {\r\n      return { ...base, motivo: base.motivo ?? 'Registro ya procesado; se respeta su estado' };\r\n    }\r\n\r\n    // Error 1: datos corruptos (no interrumpe el flujo)\r\n    const validacion = this.validarDatosPago();\r\n    if (!validacion.valido) {\r\n      return resultado('error_datos', validacion.errores.join('; '));\r\n    }\r\n\r\n    // Error 2: Hacienda caída / cédula inexistente -> Fail-Safe\r\n    const proveedor = Proveedor.desdeHacienda(this.#datos.cedula, respuestaHacienda);\r\n    if (!proveedor.tieneDatosTributarios()) {\r\n      return resultado(\r\n        'pendiente_verificacion_manual',\r\n        'API de Hacienda no disponible o sin datos tributarios (Fail-Safe)'\r\n      );\r\n    }\r\n\r\n    // Regla 2: riesgo fiscal\r\n    const riesgo = proveedor.evaluarRiesgoFiscal();\r\n    if (!riesgo.apto) {\r\n      return resultado('retenido', `Retenido por riesgo fiscal: ${riesgo.motivo}`);\r\n    }\r\n\r\n    // Regla 3: auditoría por monto alto\r\n    if (this.requiereAuditoriaPorMonto()) {\r\n      return resultado(\r\n        'retenido_auditoria',\r\n        `Monto supera ${Pago.LIMITE_AUDITORIA} CRC; requiere revisión gerencial`\r\n      );\r\n    }\r\n\r\n    // Regla 5: aprobado con comprobante QR\r\n    return resultado('aprobado', riesgo.motivo, this.generarComprobanteQR());\r\n  }\r\n}\n\n// ---------------------------------------------------------------\n// ADAPTADOR n8n: combina cada pago (nodo \"Obtener pagos pendientes\")\n// con la respuesta de Hacienda (nodo \"Consultar Hacienda\").\n// ---------------------------------------------------------------\nconst pagosOriginales = $('Obtener pagos pendientes').all();\nconst respuestasHacienda = $input.all();\n\nreturn respuestasHacienda.map((item, i) => {\n  const idx = item.pairedItem?.item ?? i;\n  const registro = pagosOriginales[idx].json;\n  // Si la API de Hacienda falló, hizo timeout o no existe, n8n entrega error:\n  const hacienda = item.json && !item.json.error && item.json.situacion ? item.json : null;\n  const actualizado = new Pago(registro).procesar(hacienda);\n  return {\n    json: {\n      registroActualizado: actualizado,\n      estado: actualizado.estado,\n      id: actualizado.id,\n      monto: actualizado.monto,\n      proveedor: actualizado.proveedor,\n      cedula: actualizado.cedula,\n      motivo: actualizado.motivo,\n      qrUrl: actualizado.qrUrl,\n      referenciaAutorizacion: actualizado.referenciaAutorizacion,\n    },\n  };\n});\n"
       },
       "id": "n4",
       "name": "Reglas de negocio POO",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1100,
-        100
+        840,
+        240
       ]
     },
     {
@@ -219,8 +91,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        1320,
-        100
+        1060,
+        240
       ]
     },
     {
@@ -247,8 +119,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1540,
-        0
+        1300,
+        140
       ]
     },
     {
@@ -271,86 +143,13 @@
         }
       },
       "id": "n7",
-      "name": "PUT Retenido / Error / Manual (requiere revisión)",
+      "name": "PUT Retenido / Error / Manual",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1540,
-        250
+        1300,
+        340
       ]
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "language": "javaScript",
-        "jsCode": "// GENERADO por scripts/build-n8n.js - NO editar a mano\n// Nodo de Telemetría: recopila todos los pagos procesados y genera un balance ejecutivo.\nconst items = $input.all();\nconst total = items.length;\nconst conteo = {\n  aprobado: 0,\n  retenido: 0,\n  retenido_auditoria: 0,\n  pendiente_verificacion_manual: 0,\n  error_datos: 0,\n};\nlet montoAprobado = 0;\n\nfor (const item of items) {\n  const reg = item.json;\n  const est = reg.estado || 'otro';\n  if (conteo[est] !== undefined) {\n    conteo[est]++;\n  } else {\n    conteo[est] = (conteo[est] || 0) + 1;\n  }\n  if (est === 'aprobado' && reg.monto) {\n    montoAprobado += Number(reg.monto);\n  }\n}\n\nreturn [{\n  json: {\n    resumenEjecutivo: {\n      totalPagosProcesados: total,\n      aprobadosConQR: conteo.aprobado || 0,\n      retenidosRiesgoFiscal: conteo.retenido || 0,\n      retenidosAuditoriaMonto: conteo.retenido_auditoria || 0,\n      pendientesVerificacionManual: conteo.pendiente_verificacion_manual || 0,\n      erroresDatos: conteo.error_datos || 0,\n      montoTotalAprobadoCRC: montoAprobado,\n      fechaEjecucion: new Date().toISOString(),\n      resultadoGeneral: total === 0\n        ? 'No se encontraron pagos pendientes por procesar'\n        : `${conteo.aprobado || 0} de ${total} pagos aprobados satisfactoriamente con QR`,\n    },\n    detallesPagos: items.map(it => ({\n      id: it.json.id,\n      proveedor: it.json.proveedor,\n      cedula: it.json.cedula,\n      monto: it.json.monto,\n      estado: it.json.estado,\n      motivo: it.json.motivo,\n      referenciaAutorizacion: it.json.referenciaAutorizacion,\n      qrUrl: it.json.qrUrl\n    }))\n  }\n}];\n"
-      },
-      "id": "n10",
-      "name": "Resumen y Telemetría Ejecutiva",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1800,
-        120
-      ]
-    },
-    {
-      "parameters": {
-        "resource": "chat",
-        "operation": "complete",
-        "model": "gpt-4o-mini",
-        "prompt": {
-          "messages": [
-            {
-              "role": "system",
-              "content": "Eres un Auditor Financiero Senior. Con base en la telemetría del motor POO, genera: 1) Memorando ejecutivo formal para Gerencia resumiendo aprobaciones y retenciones, y 2) Borrador de notificación a proveedores retenidos por riesgo fiscal o monto extraordinario."
-            },
-            {
-              "role": "user",
-              "content": "=Resumen de pagos:\n{{ JSON.stringify($json.resumenEjecutivo, null, 2) }}\n\nDetalles:\n{{ JSON.stringify($json.detallesPagos, null, 2) }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "n11",
-      "name": "Auditor IA (OpenAI)",
-      "type": "n8n-nodes-base.openAi",
-      "typeVersion": 1.4,
-      "position": [
-        2160,
-        120
-      ],
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "operation": "append",
-        "documentId": {
-          "__rl": true,
-          "value": "",
-          "mode": "url"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "Auditoria_Pagos",
-          "mode": "name"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "value": {}
-        },
-        "options": {}
-      },
-      "id": "n12",
-      "name": "Registrar en Google Sheets",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
-      "position": [
-        2440,
-        120
-      ],
-      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -369,36 +168,7 @@
       "main": [
         [
           {
-            "node": "Pre-validación POO",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Pre-validación POO": {
-      "main": [
-        [
-          {
-            "node": "¿Datos válidos? (consultar Hacienda)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "¿Datos válidos? (consultar Hacienda)": {
-      "main": [
-        [
-          {
             "node": "Consultar Hacienda",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "PUT Retenido / Error / Manual (requiere revisión)",
             "type": "main",
             "index": 0
           }
@@ -438,51 +208,7 @@
         ],
         [
           {
-            "node": "PUT Retenido / Error / Manual (requiere revisión)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "PUT Aprobado (con QR)": {
-      "main": [
-        [
-          {
-            "node": "Resumen y Telemetría Ejecutiva",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "PUT Retenido / Error / Manual (requiere revisión)": {
-      "main": [
-        [
-          {
-            "node": "Resumen y Telemetría Ejecutiva",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Resumen y Telemetría Ejecutiva": {
-      "main": [
-        [
-          {
-            "node": "Auditor IA (OpenAI)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Auditor IA (OpenAI)": {
-      "main": [
-        [
-          {
-            "node": "Registrar en Google Sheets",
+            "node": "PUT Retenido / Error / Manual",
             "type": "main",
             "index": 0
           }
