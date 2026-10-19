@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { Pago } from '../src/models/Pago.js';
-import { Proveedor } from '../src/models/Proveedor.js';
+import { Proveedor, ProveedorNacional, ProveedorInternacional } from '../src/models/Proveedor.js';
 
 const AL_DIA = { nombre: 'X', situacion: { moroso: 'NO', omiso: 'NO', estado: 'Inscrito' } };
 const base = { id: 1, cedula: '3101012009', monto: 100000, fecha: '2026-10-19', estado: 'pendiente' };
@@ -66,15 +66,54 @@ test('Bitácora de auditoría: cada decisión registra fecha, estados y motivo',
   assert.equal(procesar({ estado: 'aprobado' }).historial, undefined);
 });
 
-test('requiereConsultaHacienda: solo pendientes con datos válidos', () => {
+test('requiereConsultaHacienda: solo pendientes nacionales con datos válidos', () => {
   assert.equal(new Pago(base).requiereConsultaHacienda(), true);
   assert.equal(new Pago({ ...base, monto: 0 }).requiereConsultaHacienda(), false);
   assert.equal(new Pago({ ...base, estado: 'aprobado' }).requiereConsultaHacienda(), false);
+  assert.equal(new Pago({ ...base, pais: 'US' }).requiereConsultaHacienda(), false);
 });
 
 test('Proveedor.situacion es inmutable', () => {
   const p = Proveedor.desdeHacienda('3101012009', AL_DIA);
   assert.throws(() => { 'use strict'; p.situacion.moroso = 'SI'; }, TypeError);
+});
+
+test('Reto 1 (Herencia y Polimorfismo): ProveedorNacional vs ProveedorInternacional', () => {
+  // 1. Herencia de clases
+  const nac = Proveedor.crear({ cedula: '3101012009', nombre: 'Banco BAC', pais: 'CR' }, AL_DIA);
+  const inter = Proveedor.crear({ cedula: 'US-987654321', nombre: 'AWS Inc', pais: 'US', jurisdiccionCooperante: true });
+
+  assert.ok(nac instanceof Proveedor, 'ProveedorNacional debe heredar de Proveedor');
+  assert.ok(nac instanceof ProveedorNacional, 'Debe ser instancia de ProveedorNacional');
+  assert.ok(inter instanceof Proveedor, 'ProveedorInternacional debe heredar de Proveedor');
+  assert.ok(inter instanceof ProveedorInternacional, 'Debe ser instancia de ProveedorInternacional');
+
+  // 2. Polimorfismo en tiempo de entrega
+  assert.equal(nac.calcularTiempoEntregaDias(), 2, 'Local CR debe ser 2 días');
+  assert.equal(inter.calcularTiempoEntregaDias(), 7, 'Internacional debe ser 7 días');
+
+  // 3. Polimorfismo en evaluación de riesgo
+  const riesgoNac = nac.evaluarRiesgo();
+  assert.equal(riesgoNac.apto, true);
+  assert.equal(riesgoNac.nivelRiesgo, 'BAJO');
+
+  const riesgoInter = inter.evaluarRiesgo();
+  assert.equal(riesgoInter.apto, true);
+  assert.equal(riesgoInter.nivelRiesgo, 'MEDIO');
+
+  // 4. Polimorfismo en paraíso fiscal / jurisdicción no cooperante
+  const paraiso = Proveedor.crear({ cedula: 'PA-112233', nombre: 'Offshore Corp', pais: 'PA', jurisdiccionCooperante: false });
+  const riesgoParaiso = paraiso.evaluarRiesgo();
+  assert.equal(riesgoParaiso.apto, false);
+  assert.equal(riesgoParaiso.nivelRiesgo, 'CRITICO');
+
+  // 5. Procesamiento polimórfico en Pago
+  const pagoInter = new Pago({ id: 10, cedula: 'US-987654321', monto: 120000, fecha: '2026-10-19', estado: 'pendiente', pais: 'US' });
+  const resInter = pagoInter.procesar();
+  assert.equal(resInter.estado, 'aprobado');
+  assert.equal(resInter.tipoProveedor, 'internacional');
+  assert.equal(resInter.tiempoEntregaDias, 7);
+  assert.ok(resInter.qrUrl.startsWith('https://api.qrserver.com/'));
 });
 
 test('Single Source of Truth: n8n/codigo-nodo-n8n.js contiene las clases vigentes', () => {

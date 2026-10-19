@@ -1,8 +1,8 @@
-import { Proveedor } from './Proveedor.js';
+import { Proveedor, ProveedorNacional } from './Proveedor.js';
 
 /**
  * Pago: modela el pago a un proveedor, aplica los límites de monto,
- * evalúa las reglas de negocio y genera el comprobante QR.
+ * evalúa las reglas de negocio con polimorfismo y genera el comprobante QR.
  */
 export class Pago {
   static LIMITE_AUDITORIA = 2500000;
@@ -35,13 +35,21 @@ export class Pago {
     return this.#datos.estado;
   }
 
+  get proveedor() {
+    return this.#datos.proveedor;
+  }
+
+  get pais() {
+    return this.#datos.pais || 'CR';
+  }
+
   /** Regla 4: solo se procesan registros en estado "pendiente". */
   estaPendiente() {
     return this.#datos.estado === 'pendiente';
   }
 
   /**
-   * Error 1: falta ID, monto <= 0 o cédula inválida.
+   * Error 1: falta ID, monto <= 0 o identificación inválida.
    * @returns {{valido: boolean, errores: string[]}}
    */
   validarDatosPago() {
@@ -52,7 +60,8 @@ export class Pago {
     if (this.#datos.monto === undefined || this.#datos.monto === null || !Number.isFinite(monto) || monto <= 0) {
       errores.push('El monto debe ser mayor a 0');
     }
-    if (!new Proveedor({ cedula: this.#datos.cedula }).tieneCedulaValida()) {
+    const prov = Proveedor.crear(this.#datos);
+    if (!prov.tieneIdentificacionValida()) {
       errores.push('La cédula debe tener entre 9 y 12 dígitos numéricos');
     }
     const fecha = this.#datos.fecha;
@@ -86,16 +95,17 @@ export class Pago {
   }
 
   /**
-   * Indica si vale la pena consultar a Hacienda: solo pagos pendientes con datos válidos.
-   * Evita llamadas innecesarias a la API externa.
+   * Indica si vale la pena consultar a Hacienda: solo pagos nacionales pendientes con datos válidos.
    */
   requiereConsultaHacienda() {
-    return this.estaPendiente() && this.validarDatosPago().valido;
+    const prov = Proveedor.crear(this.#datos);
+    return this.estaPendiente() && this.validarDatosPago().valido && prov instanceof ProveedorNacional;
   }
 
   /**
-   * Ejecuta todas las reglas de negocio.
+   * Ejecuta todas las reglas de negocio aprovechando el polimorfismo de Proveedor.
    * @param {object|null} respuestaHacienda Respuesta de Hacienda; null/inválida si la API falló.
+   * @param {Date} ahora Marca de tiempo para la auditoría.
    * @returns {object} Registro actualizado listo para el PUT a JSON Server.
    */
   procesar(respuestaHacienda = null, ahora = new Date()) {
@@ -124,30 +134,42 @@ export class Pago {
       return resultado('error_datos', validacion.errores.join('; '));
     }
 
-    // Error 2: Hacienda caída / cédula inexistente -> Fail-Safe
-    const proveedor = Proveedor.desdeHacienda(this.#datos.cedula, respuestaHacienda);
-    if (!proveedor.tieneDatosTributarios()) {
+    // Polimorfismo: instanciar la subclase adecuada (Nacional o Internacional)
+    const proveedor = Proveedor.crear(this.#datos, respuestaHacienda);
+
+    // Error 2: Hacienda caída / cédula inexistente en proveedores nacionales -> Fail-Safe
+    if (proveedor instanceof ProveedorNacional && !proveedor.tieneDatosTributarios()) {
       return resultado(
         'pendiente_verificacion_manual',
         'API de Hacienda no disponible o sin datos tributarios (Fail-Safe)'
       );
     }
 
-    // Regla 2: riesgo fiscal
-    const riesgo = proveedor.evaluarRiesgoFiscal();
+    // Regla 2 (Polimórfica): evaluación de riesgo (nacional ante Hacienda o internacional)
+    const riesgo = proveedor.evaluarRiesgo(respuestaHacienda);
+    const metaPolimorfica = {
+      tipoProveedor: proveedor.tipo,
+      tiempoEntregaDias: proveedor.calcularTiempoEntregaDias(),
+      nivelRiesgo: riesgo.nivelRiesgo || 'DESCONOCIDO',
+    };
+
     if (!riesgo.apto) {
-      return resultado('retenido', `Retenido por riesgo fiscal: ${riesgo.motivo}`);
+      return resultado('retenido', `Retenido por riesgo fiscal: ${riesgo.motivo}`, metaPolimorfica);
     }
 
     // Regla 3: auditoría por monto alto
     if (this.requiereAuditoriaPorMonto()) {
       return resultado(
         'retenido_auditoria',
-        `Monto supera ${Pago.LIMITE_AUDITORIA} CRC; requiere revisión gerencial`
+        `Monto supera ${Pago.LIMITE_AUDITORIA} CRC; requiere revisión gerencial`,
+        metaPolimorfica
       );
     }
 
     // Regla 5: aprobado con comprobante QR
-    return resultado('aprobado', riesgo.motivo, this.generarComprobanteQR());
+    return resultado('aprobado', riesgo.motivo, {
+      ...this.generarComprobanteQR(),
+      ...metaPolimorfica,
+    });
   }
 }
