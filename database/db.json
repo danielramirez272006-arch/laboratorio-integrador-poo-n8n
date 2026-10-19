@@ -2,33 +2,43 @@
   "pagos": [
     {
       "id": 1,
-      "test": "val1",
-      "motivo": "Registro ya procesado; se respeta su estado",
-      "requiereRevision": true
+      "proveedor": "Banco BAC San José (caso éxito)",
+      "cedula": "3101012009",
+      "monto": 350000,
+      "fecha": "2026-10-19",
+      "estado": "pendiente"
     },
     {
       "id": 2,
-      "test": "val2",
-      "motivo": "Registro ya procesado; se respeta su estado",
-      "requiereRevision": true
+      "proveedor": "Banco BAC San José (caso monto alto)",
+      "cedula": "3101012009",
+      "monto": 5000000,
+      "fecha": "2026-10-19",
+      "estado": "pendiente"
     },
     {
       "id": 3,
-      "test": "val3",
-      "motivo": "Registro ya procesado; se respeta su estado",
-      "requiereRevision": true
+      "proveedor": "Transportes Rey del Sur S.A. (caso riesgo fiscal real)",
+      "cedula": "3101307520",
+      "monto": 180000,
+      "fecha": "2026-10-19",
+      "estado": "pendiente"
     },
     {
       "id": 4,
-      "test": "val4",
-      "motivo": "Registro ya procesado; se respeta su estado",
-      "requiereRevision": true
+      "proveedor": "Proveedor Fantasma S.A. (cédula inexistente)",
+      "cedula": "999999999999",
+      "monto": 120000,
+      "fecha": "2026-10-19",
+      "estado": "pendiente"
     },
     {
       "id": 5,
-      "test": "val5",
-      "motivo": "Registro ya procesado; se respeta su estado",
-      "requiereRevision": true
+      "proveedor": "Proveedor con datos corruptos",
+      "cedula": "ABC-123",
+      "monto": -500,
+      "fecha": "2026-10-19",
+      "estado": "pendiente"
     }
   ]
 }
