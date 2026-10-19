@@ -8,10 +8,10 @@
       "fecha": "2026-10-19",
       "estado": "aprobado",
       "motivo": "Al día con Hacienda",
-      "fechaProceso": "2026-10-19T17:18:59.860Z",
+      "fechaProceso": "2026-10-19T17:31:07.836Z",
       "historial": [
         {
-          "fecha": "2026-10-19T17:18:59.860Z",
+          "fecha": "2026-10-19T17:31:07.836Z",
           "de": "pendiente",
           "a": "aprobado",
           "motivo": "Al día con Hacienda"
@@ -32,10 +32,10 @@
       "fecha": "2026-10-19",
       "estado": "retenido_auditoria",
       "motivo": "Monto supera 2500000 CRC; requiere revisión gerencial",
-      "fechaProceso": "2026-10-19T17:18:59.861Z",
+      "fechaProceso": "2026-10-19T17:31:07.838Z",
       "historial": [
         {
-          "fecha": "2026-10-19T17:18:59.861Z",
+          "fecha": "2026-10-19T17:31:07.838Z",
           "de": "pendiente",
           "a": "retenido_auditoria",
           "motivo": "Monto supera 2500000 CRC; requiere revisión gerencial"
@@ -54,10 +54,10 @@
       "fecha": "2026-10-19",
       "estado": "retenido",
       "motivo": "Retenido por riesgo fiscal: proveedor moroso; proveedor omiso",
-      "fechaProceso": "2026-10-19T17:18:59.863Z",
+      "fechaProceso": "2026-10-19T17:31:07.838Z",
       "historial": [
         {
-          "fecha": "2026-10-19T17:18:59.863Z",
+          "fecha": "2026-10-19T17:31:07.838Z",
           "de": "pendiente",
           "a": "retenido",
           "motivo": "Retenido por riesgo fiscal: proveedor moroso; proveedor omiso"
@@ -76,10 +76,10 @@
       "fecha": "2026-10-19",
       "estado": "pendiente_verificacion_manual",
       "motivo": "API de Hacienda no disponible o sin datos tributarios (Fail-Safe)",
-      "fechaProceso": "2026-10-19T17:18:59.863Z",
+      "fechaProceso": "2026-10-19T17:31:07.839Z",
       "historial": [
         {
-          "fecha": "2026-10-19T17:18:59.863Z",
+          "fecha": "2026-10-19T17:31:07.839Z",
           "de": "pendiente",
           "a": "pendiente_verificacion_manual",
           "motivo": "API de Hacienda no disponible o sin datos tributarios (Fail-Safe)"
@@ -95,10 +95,10 @@
       "fecha": "2026-10-19",
       "estado": "error_datos",
       "motivo": "El monto debe ser mayor a 0; La cédula debe tener entre 9 y 12 dígitos numéricos",
-      "fechaProceso": "2026-10-19T17:18:59.863Z",
+      "fechaProceso": "2026-10-19T17:31:07.839Z",
       "historial": [
         {
-          "fecha": "2026-10-19T17:18:59.863Z",
+          "fecha": "2026-10-19T17:31:07.839Z",
           "de": "pendiente",
           "a": "error_datos",
           "motivo": "El monto debe ser mayor a 0; La cédula debe tener entre 9 y 12 dígitos numéricos"

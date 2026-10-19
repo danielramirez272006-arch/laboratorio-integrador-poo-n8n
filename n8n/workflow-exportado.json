@@ -299,6 +299,7 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
+            "headers": "={{ $json.output || $json.text || \"Dictamen de Auditoría\" }}",
             "id": "={{ $json.id }}",
             "proveedor": "={{ $json.proveedor }}",
             "monto": "={{ $json.monto }}",
@@ -390,6 +391,11 @@
             "node": "Generar Comprobante QR",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Agente IA Auditor",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -405,22 +411,16 @@
         ]
       ]
     },
-    "Enviar Comprobante por Gmail": {
-      "main": [
-        [
-          {
-            "node": "Agente IA Auditor",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "PUT Retenido / Error / Manual": {
       "main": [
         [
           {
             "node": "¿Alerta Crítica?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Agente IA Auditor",
             "type": "main",
             "index": 0
           }
@@ -432,24 +432,6 @@
         [
           {
             "node": "Alerta Moroso por Gmail",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Agente IA Auditor",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Alerta Moroso por Gmail": {
-      "main": [
-        [
-          {
-            "node": "Agente IA Auditor",
             "type": "main",
             "index": 0
           }

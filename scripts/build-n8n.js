@@ -296,6 +296,7 @@ const workflow = {
         columns: {
           mappingMode: 'defineBelow',
           value: {
+            headers: '={{ $json.output || $json.text || "Dictamen de Auditoría" }}',
             id: '={{ $json.id }}',
             proveedor: '={{ $json.proveedor }}',
             monto: '={{ $json.monto }}',
@@ -334,25 +335,28 @@ const workflow = {
       ],
     },
     'PUT Aprobado (con QR)': {
-      main: [[{ node: 'Generar Comprobante QR', type: 'main', index: 0 }]],
+      main: [
+        [
+          { node: 'Generar Comprobante QR', type: 'main', index: 0 },
+          { node: 'Agente IA Auditor', type: 'main', index: 0 },
+        ],
+      ],
     },
     'Generar Comprobante QR': {
       main: [[{ node: 'Enviar Comprobante por Gmail', type: 'main', index: 0 }]],
     },
-    'Enviar Comprobante por Gmail': {
-      main: [[{ node: 'Agente IA Auditor', type: 'main', index: 0 }]],
-    },
     'PUT Retenido / Error / Manual': {
-      main: [[{ node: '¿Alerta Crítica?', type: 'main', index: 0 }]],
+      main: [
+        [
+          { node: '¿Alerta Crítica?', type: 'main', index: 0 },
+          { node: 'Agente IA Auditor', type: 'main', index: 0 },
+        ],
+      ],
     },
     '¿Alerta Crítica?': {
       main: [
         [{ node: 'Alerta Moroso por Gmail', type: 'main', index: 0 }],
-        [{ node: 'Agente IA Auditor', type: 'main', index: 0 }],
       ],
-    },
-    'Alerta Moroso por Gmail': {
-      main: [[{ node: 'Agente IA Auditor', type: 'main', index: 0 }]],
     },
     'DeepSeek Chat Model': {
       ai_languageModel: [
