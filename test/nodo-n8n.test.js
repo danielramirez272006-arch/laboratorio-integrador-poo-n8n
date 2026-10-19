@@ -72,7 +72,11 @@ test('Workflow exportado: nodos, bifurcaciones y conexiones coherentes', () => {
 
   // Validar sticky notes de documentación visual
   const notes = wf.nodes.filter((n) => n.type === 'n8n-nodes-base.stickyNote');
-  assert.equal(notes.length, 4, 'Deben existir 4 sticky notes en el canvas');
+  assert.equal(notes.length, 5, 'Deben existir 5 sticky notes en el canvas');
+
+  // Validar nodos de extensión Enterprise
+  assert.ok(wf.nodes.find((n) => n.name === 'Auditor IA (OpenAI)'), 'Debe existir nodo de IA');
+  assert.ok(wf.nodes.find((n) => n.name === 'Registrar en Google Sheets'), 'Debe existir nodo de Google Sheets');
 
   // Validar reintentos en Hacienda
   const hacienda = wf.nodes.find((n) => n.name === 'Consultar Hacienda');

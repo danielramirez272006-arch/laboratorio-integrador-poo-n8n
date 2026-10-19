@@ -66,6 +66,22 @@
       ]
     },
     {
+      "parameters": {
+        "content": "## 5. Fase Enterprise: IA & Google Sheets\n- **Auditor IA (OpenAI gpt-4o-mini):** Recibe la telemetría consolidada de las clases POO y genera automáticamente un memorando ejecutivo y borradores de notificación.\n- **Google Sheets:** Añade la bitácora histórica en una hoja de cálculo en la nube.\n*(Cuentan con tolerancia a fallos para no bloquear el flujo si no se conectan API keys)*",
+        "height": 440,
+        "width": 560,
+        "color": 3
+      },
+      "id": "note5",
+      "name": "Nota: IA y Google Sheets",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2110,
+        -80
+      ]
+    },
+    {
       "parameters": {},
       "id": "n1",
       "name": "Iniciar manualmente",
@@ -277,6 +293,64 @@
         1800,
         120
       ]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "complete",
+        "model": "gpt-4o-mini",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Eres un Auditor Financiero Senior. Con base en la telemetría del motor POO, genera: 1) Memorando ejecutivo formal para Gerencia resumiendo aprobaciones y retenciones, y 2) Borrador de notificación a proveedores retenidos por riesgo fiscal o monto extraordinario."
+            },
+            {
+              "role": "user",
+              "content": "=Resumen de pagos:\n{{ JSON.stringify($json.resumenEjecutivo, null, 2) }}\n\nDetalles:\n{{ JSON.stringify($json.detallesPagos, null, 2) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "n11",
+      "name": "Auditor IA (OpenAI)",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.4,
+      "position": [
+        2160,
+        120
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Auditoria_Pagos",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "n12",
+      "name": "Registrar en Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2440,
+        120
+      ],
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -387,6 +461,28 @@
         [
           {
             "node": "Resumen y Telemetría Ejecutiva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumen y Telemetría Ejecutiva": {
+      "main": [
+        [
+          {
+            "node": "Auditor IA (OpenAI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auditor IA (OpenAI)": {
+      "main": [
+        [
+          {
+            "node": "Registrar en Google Sheets",
             "type": "main",
             "index": 0
           }
